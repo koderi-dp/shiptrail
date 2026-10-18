@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.1.0rc1] - 2026-10-18
+## [0.1.0] - 2026-10-18
 
 First release under the Shiptrail name. Shiptrail runs a configurable pipeline of Claude Code,
 Codex and OpenCode agents against a repository, with a local dashboard.
@@ -11,3 +11,7 @@ Codex and OpenCode agents against a repository, with a local dashboard.
   library, activity, usage and repository settings.
 - `shiptrail upgrade` keeps a repository's engine range and shortcuts in step with the
   installed engine.
+
+## [0.1.0rc1] - 2026-10-18
+
+Release candidate for 0.1.0; no `shiptrail upgrade` needed.

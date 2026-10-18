@@ -15,6 +15,7 @@ test("backlog, live board and nodes, activity, Stop/Resume, reports and keyboard
 }) => {
   const repo = engine.repos[0];
   await page.goto(`${engine.url}/#/repo/${repo}/backlog`);
+  await page.getByRole("button", { name: "New item" }).click();
   await page.getByLabel("Title", { exact: true }).fill("Ship the feature");
   await page.getByRole("button", { name: "Add item" }).click();
   await page.getByRole("button", { name: "Start", exact: true }).click();
@@ -111,7 +112,9 @@ test("unsaved provider profiles survive SSE and JSON preview validates steps", a
 
 test("repo switcher, overview counts, server death and SSE reconnect", async ({ page, engine }) => {
   await page.goto(engine.url);
-  await expect(page.getByRole("heading", { name: "Shiptrail overview", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Shiptrail overview", exact: true }),
+  ).toBeVisible();
   await expect(
     page.getByRole("region", { name: "Repositories" }).getByText("0 running", { exact: true }),
   ).toHaveCount(2);
@@ -144,7 +147,9 @@ test("repo switcher, overview counts, server death and SSE reconnect", async ({ 
 
 test("dark screenshot baselines and axe contrast", async ({ page, engine }) => {
   await page.goto(engine.url);
-  await expect(page.getByRole("heading", { name: "Shiptrail overview", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Shiptrail overview", exact: true }),
+  ).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
   const screenshotStyle = fileURLToPath(new URL("./screenshot.css", import.meta.url));
   async function capture(name: string) {
@@ -302,6 +307,7 @@ test("Vite authenticates same-origin mutations and rejects foreign origins and h
     await server.listen();
     const url = server.resolvedUrls!.local[0];
     await page.goto(`${url}#/repo/${engine.repos[0]}/backlog`);
+    await page.getByRole("button", { name: "New item" }).click();
     await page.getByLabel("Title", { exact: true }).fill("Through Vite");
     const response = page.waitForResponse(
       (r) => r.url().endsWith("/backlog") && r.request().method() === "POST",

@@ -350,8 +350,8 @@ describe("session 3.5 routes", () => {
     expect(html).toContain("Move Feature &lt;script&gt; up");
     expect(html).toContain("Start");
     expect(html).toContain("Remove");
-    expect(html).toContain("Add item");
-    expect(html).toContain('<option selected="">fast</option>');
+    expect(html).toContain("New item");
+    expect(html).toContain(">fast</span>");
   });
   it("renders repository editor, preview and role provenance", async () => {
     const html = await renderSettingsRoute("/repo/alpha/settings");

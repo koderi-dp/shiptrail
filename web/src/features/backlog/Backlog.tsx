@@ -8,6 +8,14 @@ import { Input } from "@/ui/primitives/input";
 import { Select } from "@/ui/primitives/select";
 import { Badge } from "@/ui/primitives/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/ui/primitives/tabs";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/ui/primitives/dialog";
 import { BacklogKanban } from "./BacklogKanban";
 import { metaChange, priorityLabel, statusLabel, type BacklogTarget } from "./model";
 
@@ -78,6 +86,7 @@ export function Backlog({ repo }: { repo: string }) {
   const [title, setTitle] = useState("");
   const [details, setDetails] = useState("");
   const [pipeline, setPipeline] = useState("");
+  const [adding, setAdding] = useState(false);
   const [drag, setDrag] = useState<string>();
   const [editing, setEditing] = useState<string>();
   const [waiting, setWaiting] = useState<typeof state.data>();
@@ -135,7 +144,10 @@ export function Backlog({ repo }: { repo: string }) {
   }
   return (
     <PageShell>
-      <h1 className="text-2xl font-medium">Backlog</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-medium">Backlog</h1>
+        {state.data && <Button onClick={() => setAdding(true)}>New item</Button>}
+      </div>
       {state.isPending && <p role="status">Loading backlog…</p>}
       {state.error && <p role="alert">{state.error.message}</p>}
       {mutation.error && (
@@ -150,51 +162,66 @@ export function Backlog({ repo }: { repo: string }) {
       )}
       {data && (
         <>
-          <form
-            className="grid gap-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              mutation.mutate(
-                { action: "add", text: title, details, pipeline: selected },
-                {
-                  onSuccess: () => {
-                    setTitle("");
-                    setDetails("");
-                  },
-                },
-              );
-            }}
-          >
-            <label>
-              Pipeline
-              <Select value={selected} onChange={(e) => setPipeline(e.target.value)}>
-                {Object.keys(data.config.pipelines).map((name) => (
-                  <option key={name}>{name}</option>
-                ))}
-              </Select>
-            </label>
-            <label>
-              Title
-              <Input
-                required
-                maxLength={300}
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            </label>
-            <label>
-              Details
-              <textarea
-                className="min-h-24 w-full rounded-md border border-border bg-inset p-3 text-sm"
-                maxLength={20000}
-                value={details}
-                onChange={(e) => setDetails(e.target.value)}
-              />
-            </label>
-            <Button loading={busy} disabled={!title.trim() || busy}>
-              Add item
-            </Button>
-          </form>
+          <Dialog open={adding} onOpenChange={setAdding}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>New backlog item</DialogTitle>
+              </DialogHeader>
+              <form
+                className="grid gap-3"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  mutation.mutate(
+                    { action: "add", text: title, details, pipeline: selected },
+                    {
+                      onSuccess: () => {
+                        setTitle("");
+                        setDetails("");
+                        setAdding(false);
+                      },
+                    },
+                  );
+                }}
+              >
+                <label>
+                  Pipeline
+                  <Select value={selected} onChange={(e) => setPipeline(e.target.value)}>
+                    {Object.keys(data.config.pipelines).map((name) => (
+                      <option key={name}>{name}</option>
+                    ))}
+                  </Select>
+                </label>
+                <label>
+                  Title
+                  <Input
+                    required
+                    maxLength={300}
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                  />
+                </label>
+                <label>
+                  Details
+                  <textarea
+                    className="min-h-24 w-full rounded-md border border-border bg-inset p-3 text-sm"
+                    maxLength={20000}
+                    value={details}
+                    onChange={(e) => setDetails(e.target.value)}
+                  />
+                </label>
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button type="button" variant="outline">
+                      Cancel
+                    </Button>
+                  </DialogClose>
+                  <Button loading={busy} disabled={!title.trim() || busy}>
+                    Add item
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
           <Tabs
             value={view}
             onValueChange={(next) =>

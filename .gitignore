@@ -1,0 +1,17 @@
+# Runtime state of factory runs
+/shiptrail/jobs/
+*.tmp
+
+# Local factory installation
+/.claude/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+/dist/
+/src/shiptrail/dashboard_dist/
+/web/node_modules/
+/web/test-results/
+/web/playwright-report/

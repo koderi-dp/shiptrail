@@ -322,7 +322,9 @@ export function PipelineEditor({
                             onChange={(e) => change("provider", e.target.value)}
                           >
                             <option>codex</option>
-                            <option>claude</option>
+                            <option value="claude" disabled>
+                              claude (not supported yet)
+                            </option>
                             <option>opencode</option>
                           </Select>
                         )}

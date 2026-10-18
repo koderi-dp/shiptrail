@@ -260,54 +260,56 @@ export function Backlog({ repo }: { repo: string }) {
                       </p>
                     </>
                   )}
-                  <div className="mt-3 flex gap-2">
-                    <Button
-                      disabled={busy}
-                      onClick={() =>
-                        mutation.mutate({
-                          action: "start",
-                          index: item.index,
-                          key: item.key,
-                          pipeline: item.pipeline ?? data.config.defaultPipeline,
-                        })
-                      }
-                    >
-                      Start
-                    </Button>
-                    <Button
-                      variant="outline"
-                      aria-label={`Edit ${item.title}`}
-                      disabled={busy}
-                      onClick={() => setEditing(item.key)}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      aria-label={`Move ${item.title} up`}
-                      disabled={!i || busy}
-                      onClick={() => move(item.key, i - 1)}
-                    >
-                      ↑
-                    </Button>
-                    <Button
-                      variant="outline"
-                      aria-label={`Move ${item.title} down`}
-                      disabled={i === data.backlog.length - 1 || busy}
-                      onClick={() => move(item.key, i + 1)}
-                    >
-                      ↓
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      disabled={busy}
-                      onClick={() =>
-                        mutation.mutate({ action: "remove", index: item.index, key: item.key })
-                      }
-                    >
-                      Remove
-                    </Button>
-                  </div>
+                  {editing !== item.key && (
+                    <div className="mt-3 flex gap-2">
+                      <Button
+                        disabled={busy}
+                        onClick={() =>
+                          mutation.mutate({
+                            action: "start",
+                            index: item.index,
+                            key: item.key,
+                            pipeline: item.pipeline ?? data.config.defaultPipeline,
+                          })
+                        }
+                      >
+                        Start
+                      </Button>
+                      <Button
+                        variant="outline"
+                        aria-label={`Edit ${item.title}`}
+                        disabled={busy}
+                        onClick={() => setEditing(item.key)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        aria-label={`Move ${item.title} up`}
+                        disabled={!i || busy}
+                        onClick={() => move(item.key, i - 1)}
+                      >
+                        ↑
+                      </Button>
+                      <Button
+                        variant="outline"
+                        aria-label={`Move ${item.title} down`}
+                        disabled={i === data.backlog.length - 1 || busy}
+                        onClick={() => move(item.key, i + 1)}
+                      >
+                        ↓
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        disabled={busy}
+                        onClick={() =>
+                          mutation.mutate({ action: "remove", index: item.index, key: item.key })
+                        }
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  )}
                 </li>
               ))}
             </ol>

@@ -44,6 +44,13 @@ def test_upgrade_dry_run_writes_nothing_and_an_up_to_date_repo_has_nothing_to_do
     assert scaffold.upgrade(repo, dry_run=True) == "Already up to date."
 
 
+def test_upgrade_leaves_a_current_config_in_its_own_formatting(repo):  # noqa: F811
+    initialise(repo)
+    config = repo / "shiptrail/config.json"
+    config.write_text(json.dumps(json.loads(config.read_text())), encoding="utf-8")
+    assert scaffold.upgrade(repo, dry_run=True) == "Already up to date."
+
+
 def test_upgrade_rejects_a_config_in_an_unsupported_format(repo):  # noqa: F811
     initialise(repo)
     config = repo / "shiptrail/config.json"

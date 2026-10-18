@@ -161,7 +161,8 @@ def smoke(directory: Path, root: Path) -> None:
             assert merged['job']['state'] == 'merged', merged['job']
             assert (repo / 'smoke.txt').read_text(encoding='utf-8').startswith('Installed wheel')
             before_upgrade = snapshot(repo)
-            assert run(factory, 'upgrade', '--dry-run').strip() == 'Already up to date.'
+            plan = run(factory, 'upgrade', '--dry-run').strip()
+            assert plan == 'Already up to date.', plan
             assert snapshot(repo) == before_upgrade, 'upgrade --dry-run wrote files'
             assert json.loads(run(factory, 'status', job_id, '--json'))['job']['state'] == 'merged'
             # Live tool replacement and rollback run in tools/upgrade_smoke.py.

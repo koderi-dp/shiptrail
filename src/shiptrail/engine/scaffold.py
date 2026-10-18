@@ -109,7 +109,10 @@ def upgrade(root: Path, *, dry_run: bool = False) -> str:
     raw = json.loads((root / "shiptrail/config.json").read_text(encoding="utf-8-sig"))
     converted = current_format(raw)
     converted["engine"] = engine_range()
-    writes = {"shiptrail/config.json": (json.dumps(converted, indent=2) + "\n").encode()}
+    # Only rewrite the config when its content changes; its formatting is the user's.
+    writes = {} if converted == raw else {
+        "shiptrail/config.json": (json.dumps(converted, indent=2) + "\n").encode()
+    }
     clients = {
         execution["provider"]
         for steps in converted["pipelines"].values()

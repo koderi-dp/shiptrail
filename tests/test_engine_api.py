@@ -384,6 +384,16 @@ def test_backlog_item_keeps_its_pipeline_and_returns_when_its_job_is_deleted(api
     assert [i["title"] for i in state["backlog"]] == ["Item"] and state["started"] == []
 
 
+def test_start_refuses_a_missing_base_branch_with_a_clear_message(api):
+    client, _, repo_id, root = api
+    config = json.loads((root / "shiptrail/config.json").read_text())
+    config["baseBranch"] = "trunk"
+    (root / "shiptrail/config.json").write_text(json.dumps(config))
+    response = client.post(f"/api/repos/{repo_id}/jobs", json={"title": "X"}, headers=headers())
+    assert response.status_code == 400
+    assert "Base branch trunk does not exist" in response.json()["detail"]
+
+
 def test_a_folder_left_by_a_deleted_job_does_not_block_the_next_start(api):
     client, _, repo_id, root = api
     base = f"/api/repos/{repo_id}"

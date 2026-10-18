@@ -345,6 +345,14 @@ class Runtime:
             for step in frozen["pipeline"]:
                 for entry in step["executions"]:
                     self.supervisor.adapter(entry["provider"])
+            # Checked here: once queued, a missing branch would only fail in the background.
+            if not gitops.branch_exists(root, config.baseBranch):
+                current = gitops.git("symbolic-ref", "--short", "-q", "HEAD",
+                                     cwd=root).stdout.strip()
+                hint = f" This repository is on {current}." if current else ""
+                raise ValueError(
+                    f"Base branch {config.baseBranch} does not exist.{hint} Set "
+                    "baseBranch in Repo settings to the branch jobs should start from.")
             if not title.strip() or len(title) > 300 or "\n" in title or "\r" in title:
                 raise ValueError("title must be one line of 1 to 300 characters")
 

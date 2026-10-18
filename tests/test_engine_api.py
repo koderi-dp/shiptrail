@@ -535,13 +535,13 @@ def test_real_service_auto_start_second_serve_and_restart(tmp_path, monkeypatch)
 
 
 def test_ctrl_c_stops_the_service_while_a_live_stream_is_open(tmp_path, monkeypatch):
-    """A dashboard tab keeps streams open; an interrupt must not wait for them forever."""
+    """A dashboard tab keeps streams open; an interrupt ends them at once, without tracebacks."""
     monkeypatch.setenv("SHIPTRAIL_HOME", str(tmp_path / "machine"))
     monkeypatch.setenv("SHIPTRAIL_PORT", "0")
     monkeypatch.chdir(tmp_path)
     child = subprocess.Popen([sys.executable, "-m", "shiptrail.cli", "serve"],
                              stdout=subprocess.PIPE,
-                             stderr=subprocess.DEVNULL,
+                             stderr=subprocess.PIPE,
                              text=True,
                              creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
     try:
@@ -567,8 +567,10 @@ def test_ctrl_c_stops_the_service_while_a_live_stream_is_open(tmp_path, monkeypa
         # Windows only delivers Ctrl+Break to a child in its own process group.
         child.send_signal(getattr(signal, "CTRL_BREAK_EVENT", signal.SIGINT))
         # uvicorn re-raises the signal once it has shut down, so the code is not 0.
-        child.wait(timeout=15)
-        assert time.monotonic() - started < 12
+        _, errors = child.communicate(timeout=15)
+        # Faster than the 3 s grace period: the stream ended instead of being cancelled.
+        assert time.monotonic() - started < 2.5, errors
+        assert "Traceback" not in errors, errors
     finally:
         if child.poll() is None:
             child.kill()

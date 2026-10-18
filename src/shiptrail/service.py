@@ -232,10 +232,16 @@ def serve(port: int | None = None, *, open_browser: bool = False) -> int:
         import uvicorn
         from shiptrail.api.app import create_app
         app = create_app(port=port, token=data["token"])
-        # The dashboard keeps live-update streams open, and uvicorn waits for open
-        # connections before it exits. Cut them after a short grace period so Ctrl+C
-        # stops the service even with a browser tab connected.
-        server = uvicorn.Server(
+
+        class Server(uvicorn.Server):
+
+            def handle_exit(self, sig, frame) -> None:
+                # Live-update streams check this and end, so open browser tabs
+                # don't hold the shutdown until the grace period below runs out.
+                app.state.closing = True
+                super().handle_exit(sig, frame)
+
+        server = Server(
             uvicorn.Config(app,
                            host="127.0.0.1",
                            port=port,
@@ -245,7 +251,10 @@ def serve(port: int | None = None, *, open_browser: bool = False) -> int:
         print(url(data), flush=True)
         if open_browser:
             webbrowser.open(url(data))
-        server.run(sockets=[listener])
+        try:
+            server.run(sockets=[listener])
+        except KeyboardInterrupt:
+            pass  # Ctrl+C is the normal way to stop a foreground service.
         return 0
     finally:
         if listener is not None:

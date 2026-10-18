@@ -56,11 +56,16 @@ def replay(runtime: Runtime, repo: str, after: int) -> tuple[bool, dict, list[di
         return False, state, rows
 
 
+def closing(request: Request) -> bool:
+    """True once the server is shutting down, so open streams end and let it exit."""
+    return getattr(request.app.state, "closing", False)
+
+
 async def repo_stream(request: Request, runtime: Runtime, repo: str,
                       after: int) -> AsyncIterator[str]:
     heartbeat = time.monotonic()
     sent_activity: dict[int, tuple[str, float]] = {}
-    while not runtime.stopping and not await request.is_disconnected():
+    while not runtime.stopping and not closing(request) and not await request.is_disconnected():
         reset, state, rows = await asyncio.to_thread(replay, runtime, repo, after)
         if reset:
             after = state["last_event_id"]
@@ -86,7 +91,7 @@ async def repo_stream(request: Request, runtime: Runtime, repo: str,
 async def overview_stream(request: Request, runtime: Runtime) -> AsyncIterator[str]:
     previous = None
     heartbeat = time.monotonic()
-    while not runtime.stopping and not await request.is_disconnected():
+    while not runtime.stopping and not closing(request) and not await request.is_disconnected():
         current = await asyncio.to_thread(runtime.overview)
         if current != previous:
             previous = current
@@ -119,7 +124,7 @@ def log_batch(path: Path, offset: int, *, final: bool = False) -> tuple[bytes, i
 async def log_stream(request: Request, path: Path, offset: int,
                      finished: Callable[[], bool]) -> AsyncIterator[str]:
     heartbeat = time.monotonic()
-    while not await request.is_disconnected():
+    while not closing(request) and not await request.is_disconnected():
         final = await asyncio.to_thread(finished)
         chunk, offset = await asyncio.to_thread(log_batch, path, offset, final=final)
         if chunk:

@@ -39,11 +39,9 @@ export function Shell() {
   const [now, setNow] = useState(() => Date.now());
   const overview = useQuery({ queryKey: keys.overview, queryFn: api.overview });
   const repos = overview.data?.repos ?? [];
-  // The sidebar choice: a repo page's path, else ?repo= on any other page, else the only repo.
-  // A lone repository is picked only on pages that need one; elsewhere "All" stays chosen.
-  const needsOne = ["/board", "/backlog", "/repo-settings"].includes(pathname);
-  const repo =
-    params.repo ?? search.repo ?? (needsOne && repos.length === 1 ? repos[0].id : undefined);
+  // The sidebar choice: a repo page's path, else ?repo= on any other page. Never guessed:
+  // the menu links carry it, so a guess would replace "All repositories" on the next click.
+  const repo = params.repo ?? search.repo;
   const selected = repos.find((r) => r.id === repo);
   const available = selected?.status === "available";
   useEffect(() => connectOverview(client, setOverviewConnection), [client]);

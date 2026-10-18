@@ -15,7 +15,7 @@ from shiptrail.engine import db, pipeline, reports
 from shiptrail.engine.config import RepoConfig, template_config
 
 
-def execution(identifier, uses, provider="codex", model="gpt-6.1-sol", effort="medium"):
+def execution(identifier, uses, provider="codex", model="gpt-5.6-sol", effort="medium"):
     return {
         "id": identifier,
         "uses": uses,
@@ -248,7 +248,7 @@ def test_parallel_reviewers_use_their_own_provider_settings(engine):
     engine.finish()
     tasks = engine.plan()
     assert [(t["exec_id"], t["uses"], t["provider"], t["model"], t["effort"])
-            for t in tasks] == [("quality-check", "quality", "codex", "gpt-6.1-sol", "medium"),
+            for t in tasks] == [("quality-check", "quality", "codex", "gpt-5.6-sol", "medium"),
                                 ("risk-check", "risk", "claude", "opus", "high")]
 
 
@@ -271,7 +271,7 @@ def test_reusing_role_in_later_steps_keeps_separate_settings(engine):
     engine.create("002-reuse")
     engine.job_id = "002-reuse"
     engine.start()
-    assert engine.plan()[0]["model"] == "gpt-6.1-sol"
+    assert engine.plan()[0]["model"] == "gpt-5.6-sol"
     engine.finish()
     task = engine.plan()[0]
     assert (task["exec_id"], task["model"], task["effort"]) == ("polish", "gpt-6-luna", "low")
@@ -303,7 +303,7 @@ def test_pipeline_models_limits_roles_and_preamble_are_frozen(engine):
     path.unlink()
     engine.start()
     task = engine.plan()[0]
-    assert (task["model"], task["timeoutMinutes"]) == ("gpt-6.1-sol", 60)
+    assert (task["model"], task["timeoutMinutes"]) == ("gpt-5.6-sol", 60)
     assert "writer instructions" in task["role"]["instructions"]
     assert task["role"]["sha256"] == original["frozen"]["pipeline"][0]["executions"][0]["role"][
         "sha256"]

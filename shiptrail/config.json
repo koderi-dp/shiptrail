@@ -9,7 +9,7 @@
           "effort": "medium"
         },
         "codex": {
-          "model": "gpt-6.1-sol",
+          "model": "gpt-5.6-sol",
           "effort": "medium"
         }
       }
@@ -23,7 +23,7 @@
           "effort": "medium"
         },
         "codex": {
-          "model": "gpt-6.1-sol",
+          "model": "gpt-5.6-sol",
           "effort": "medium"
         }
       }
@@ -40,7 +40,7 @@
               "effort": "medium"
             },
             "codex": {
-              "model": "gpt-6.1-sol",
+              "model": "gpt-5.6-sol",
               "effort": "medium"
             }
           }
@@ -54,7 +54,7 @@
               "effort": "medium"
             },
             "codex": {
-              "model": "gpt-6.1-sol",
+              "model": "gpt-5.6-sol",
               "effort": "medium"
             }
           }
@@ -68,7 +68,7 @@
               "effort": "medium"
             },
             "codex": {
-              "model": "gpt-6.1-sol",
+              "model": "gpt-5.6-sol",
               "effort": "medium"
             }
           }
@@ -82,7 +82,7 @@
               "effort": "medium"
             },
             "codex": {
-              "model": "gpt-6.1-sol",
+              "model": "gpt-5.6-sol",
               "effort": "medium"
             }
           }
@@ -99,7 +99,7 @@
           "effort": "medium"
         },
         "codex": {
-          "model": "gpt-6.1-sol",
+          "model": "gpt-5.6-sol",
           "effort": "medium"
         }
       }

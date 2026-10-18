@@ -8,6 +8,11 @@ on:
 
 permissions: {}
 
+# A newer push to the same branch or PR replaces the older run; tag (release) runs never cancel.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type == 'branch' }}
+
 jobs:
   python:
     permissions:

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ReportView } from "./ReportView";
 import { safeUrl } from "./report-url";
-import { appendLog, renderLogLine } from "./log-lines";
+import { appendLog, displayText, formatEntries, renderLogLine } from "./log-lines";
 describe("untrusted reports", () => {
   it("renders HTML, scripts and event handlers as inert text", () => {
     const html = renderToStaticMarkup(
@@ -62,5 +62,12 @@ describe("live log", () => {
     expect(renderLogLine('{"type":"item.started","item":{"command":"git status"}}')).toContain(
       "git status",
     );
+  });
+  it("shows a multi-line entry on one row but copies it unchanged", () => {
+    const line = JSON.stringify({ type: "item.started", item: { command: "a\nb" } });
+    const entry = { key: "1", stage: "build", agent: "builder", line };
+    expect(displayText(entry, false)).toBe("item.started: a ↵ b");
+    expect(displayText({ ...entry, line: "x\r\ny" }, true)).toBe("x ↵ y");
+    expect(formatEntries([entry], false)).toContain("item.started: a\nb");
   });
 });

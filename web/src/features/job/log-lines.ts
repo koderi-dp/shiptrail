@@ -34,6 +34,11 @@ export function entryText(entry: LogEntry, raw: boolean) {
   return raw ? entry.line : renderLogLine(entry.line);
 }
 
+/** One screen row per entry: line breaks inside an entry (commands, output) show as a mark. */
+export function displayText(entry: LogEntry, raw: boolean) {
+  return entryText(entry, raw).replace(/\r\n|\r|\n/g, " ↵ ");
+}
+
 export function filterEntries(entries: LogEntry[], filter: { stage?: string; agent?: string }) {
   return entries.filter(
     (e) =>
@@ -49,7 +54,7 @@ export function findMatches(entries: LogEntry[], query: string, raw: boolean): L
   const pattern = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"),
     matches: LogMatch[] = [];
   for (const entry of entries) {
-    for (const m of entryText(entry, raw).matchAll(pattern)) {
+    for (const m of displayText(entry, raw).matchAll(pattern)) {
       matches.push({ entry, start: m.index, end: m.index + m[0].length });
     }
   }

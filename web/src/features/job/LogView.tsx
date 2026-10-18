@@ -12,7 +12,7 @@ import { Button } from "@/ui/primitives/button";
 import { Input } from "@/ui/primitives/input";
 import { Select } from "@/ui/primitives/select";
 import {
-  entryText,
+  displayText,
   filterEntries,
   findMatches,
   formatEntries,
@@ -274,7 +274,7 @@ export function LogView({
                 </span>
               )}
               <Highlighted
-                text={entryText(entry, raw)}
+                text={displayText(entry, raw)}
                 matches={matchesByEntry.get(entry.key) ?? []}
                 current={current}
               />

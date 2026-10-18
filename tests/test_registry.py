@@ -20,8 +20,8 @@ def machine(tmp_path, monkeypatch):
 @pytest.fixture
 def repo(tmp_path):
     repo = tmp_path / "My App"
-    (repo / "shiptrail").mkdir(parents=True)
-    (repo / "shiptrail" / "config.json").write_text("{}", encoding="utf-8")
+    (repo / ".shiptrail").mkdir(parents=True)
+    (repo / ".shiptrail" / "config.json").write_text("{}", encoding="utf-8")
     return repo
 
 
@@ -42,10 +42,10 @@ def test_find_repo_walks_and_prefers_nearest(repo, tmp_path):
     child = repo / "nested" / "deep"
     child.mkdir(parents=True)
     assert paths.find_repo(child) == paths.normalize_repo_path(repo)
-    assert paths.find_repo(repo / "shiptrail" / "config.json") == paths.normalize_repo_path(repo)
+    assert paths.find_repo(repo / ".shiptrail" / "config.json") == paths.normalize_repo_path(repo)
     assert paths.find_repo(tmp_path) is None
-    (child / "shiptrail").mkdir()
-    (child / "shiptrail" / "config.json").write_text("{}", encoding="utf-8")
+    (child / ".shiptrail").mkdir()
+    (child / ".shiptrail" / "config.json").write_text("{}", encoding="utf-8")
     assert paths.find_repo(child) == paths.normalize_repo_path(child)
 
 
@@ -53,7 +53,7 @@ def test_registration_stable_and_preserves_name(machine, repo):
     first = registry.register(machine, repo)
     assert first.name == repo.name
     registry.rename(machine, first.id, "Friendly name")
-    again = registry.register(machine, repo / "shiptrail" / "..")
+    again = registry.register(machine, repo / ".shiptrail" / "..")
     assert again.id == first.id
     assert again.added_at == first.added_at
     assert again.name == "Friendly name"
@@ -67,8 +67,8 @@ def test_registration_stable_and_preserves_name(machine, repo):
 def test_distinct_paths_and_missing_restore(machine, repo, tmp_path):
     first = registry.register(machine, repo)
     other = tmp_path / "elsewhere" / repo.name
-    (other / "shiptrail").mkdir(parents=True)
-    (other / "shiptrail" / "config.json").write_text("{}", encoding="utf-8")
+    (other / ".shiptrail").mkdir(parents=True)
+    (other / ".shiptrail" / "config.json").write_text("{}", encoding="utf-8")
     assert registry.register(machine, other).id != first.id
     registry.mark_missing(machine, first.id)
     assert machine.execute("SELECT last_seen FROM repos WHERE id=?",

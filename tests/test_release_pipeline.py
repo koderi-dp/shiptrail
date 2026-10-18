@@ -17,11 +17,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_smoke_snapshot_uses_portable_paths_and_ignores_git(tmp_path):
-    (tmp_path / 'shiptrail').mkdir()
-    (tmp_path / 'shiptrail/config.json').write_bytes(b'{}')
+    (tmp_path / '.shiptrail').mkdir()
+    (tmp_path / '.shiptrail/config.json').write_bytes(b'{}')
     (tmp_path / '.git').mkdir()
     (tmp_path / '.git/config').write_bytes(b'git')
-    assert snapshot(tmp_path) == {'shiptrail/config.json': b'{}'}
+    assert snapshot(tmp_path) == {'.shiptrail/config.json': b'{}'}
 
 
 def distributions(tmp_path, dashboard=True):

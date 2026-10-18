@@ -131,7 +131,7 @@ def test_a_tool_that_is_not_installed_is_reported_not_run(tmp_path, monkeypatch)
 
 
 def test_available_roles_lists_builtins_and_the_repositorys_own_per_provider(tmp_path):
-    folder = tmp_path / "shiptrail" / "roles"
+    folder = tmp_path / ".shiptrail" / "roles"
     folder.mkdir(parents=True)
     (folder / "docs-writer.md").write_text(
         "---\ntype: task\ndescription: Write docs.\n---\nWrite the docs.\n", encoding="utf-8")

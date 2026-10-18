@@ -91,7 +91,8 @@ def smoke(distributions: Path, root: Path) -> None:
     run('git', 'commit', '-qm', 'Initial')
     run(factory, 'init', '--provider', 'codex')
     run('git', 'add', '.')
-    run('git', 'commit', '-qm', 'Shiptrail init')
+    # init already committed what it wrote; this keeps the script's own changes in step too.
+    run('git', 'commit', '-qm', 'Shiptrail init', '--allow-empty')
     metadata = root / 'machine/service.json'
     opener = build_opener(ProxyHandler({}))
 

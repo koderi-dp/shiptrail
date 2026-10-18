@@ -20,7 +20,7 @@ def completed(context,
               state="done",
               text=None):
     relative = f"executions/step.exec{identifier}/r{round_}/a1/report.md"
-    source = context.root / "shiptrail/jobs" / context.job["id"] / relative
+    source = context.root / ".shiptrail/jobs" / context.job["id"] / relative
     source.parent.mkdir(parents=True)
     source.write_text(
         text or
@@ -90,7 +90,7 @@ def test_approval_packet_exposes_recorded_review_head(repo, reviewed_head):
 
 def test_acceptance_full_and_fast_and_latest_rework(repo):
     context = context_for(repo, add_job(repo))
-    folder = context.root / "shiptrail/jobs" / context.job["id"]
+    folder = context.root / ".shiptrail/jobs" / context.job["id"]
     (folder / "rework-2.md").write_text("STALE-REWORK-BODY")
     (folder / "rework-10.md").write_text("LATEST-REWORK-BODY")
     spec = completed(context,
@@ -207,7 +207,7 @@ def test_cap_trims_handoffs_second_and_never_truncates_findings_or_retry(repo, m
 
 def test_oversized_protected_request_fails_explicitly(repo):
     context = context_for(repo, add_job(repo))
-    (context.root / "shiptrail/jobs" / context.job["id"] / "request.md").write_text(
+    (context.root / ".shiptrail/jobs" / context.job["id"] / "request.md").write_text(
         "č" * packet.MAX_PACKET_BYTES, encoding="utf-8")
     with pytest.raises(packet.PacketError, match="64 KiB"):
         packet.build(context, executions=[])

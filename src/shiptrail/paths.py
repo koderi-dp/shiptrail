@@ -20,11 +20,11 @@ def normalize_repo_path(path: str | Path) -> Path:
 
 
 def find_repo(start: str | Path | None = None) -> Path | None:
-    """Find the nearest ancestor holding shiptrail/config.json."""
+    """Find the nearest ancestor holding .shiptrail/config.json."""
     path = Path(start if start is not None else Path.cwd()).expanduser().resolve()
     if path.is_file():
         path = path.parent
     for candidate in (path, *path.parents):
-        if (candidate / "shiptrail" / "config.json").is_file():
+        if (candidate / ".shiptrail" / "config.json").is_file():
             return normalize_repo_path(candidate)
     return None

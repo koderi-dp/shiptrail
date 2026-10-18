@@ -31,8 +31,8 @@ def test_resolution_order_and_freezing_evidence(tmp_path, provider):
     repo = tmp_path / "repo"
     builtins = tmp_path / "builtins"
     paths = [
-        repo / "shiptrail" / "roles" / f"custom.{provider}.md",
-        repo / "shiptrail" / "roles" / "custom.md", builtins / f"custom.{provider}.md",
+        repo / ".shiptrail" / "roles" / f"custom.{provider}.md",
+        repo / ".shiptrail" / "roles" / "custom.md", builtins / f"custom.{provider}.md",
         builtins / "custom.md"
     ]
     for i, path in enumerate(paths):
@@ -53,7 +53,7 @@ def test_resolution_order_and_freezing_evidence(tmp_path, provider):
                                             ("opencode", "codex")])
 def test_no_cross_provider_fallback_and_error_lists_all_paths(tmp_path, provider, other):
     builtins = tmp_path / "builtins"
-    roles = tmp_path / "shiptrail" / "roles"
+    roles = tmp_path / ".shiptrail" / "roles"
     write_role(roles / f"custom.{other}.md")
     write_role(builtins / f"custom.{other}.md")
     with pytest.raises(RoleError) as exc:
@@ -68,13 +68,13 @@ def test_no_cross_provider_fallback_and_error_lists_all_paths(tmp_path, provider
 
 
 def test_invalid_override_does_not_fall_back(tmp_path):
-    write_role(tmp_path / "shiptrail" / "roles" / "builder.codex.md", "No frontmatter")
+    write_role(tmp_path / ".shiptrail" / "roles" / "builder.codex.md", "No frontmatter")
     with pytest.raises(RoleError, match="builder.codex.md"):
         resolve_role("builder", "codex", root=tmp_path)
 
 
 def test_yaml_safe_load_supports_quoted_and_multiline_metadata(tmp_path):
-    path = tmp_path / "shiptrail" / "roles" / "custom.md"
+    path = tmp_path / ".shiptrail" / "roles" / "custom.md"
     write_role(
         path, "---\ntype: 'task' # comment\ncontract: spec\ndescription: |\n"
         "  Two lines\n  of description.\noutput: ../ignored.md\n"
@@ -99,7 +99,7 @@ def test_yaml_safe_load_supports_quoted_and_multiline_metadata(tmp_path):
     "---\n!!python/object/apply:os.system ['echo unsafe']\n---\nInstructions",
 ])
 def test_invalid_frontmatter_and_empty_instructions(tmp_path, text):
-    path = tmp_path / "shiptrail" / "roles" / "custom.md"
+    path = tmp_path / ".shiptrail" / "roles" / "custom.md"
     write_role(path, text)
     with pytest.raises(RoleError, match="custom.md"):
         resolve_role("custom", "claude", root=tmp_path)
@@ -212,7 +212,7 @@ def test_eject_shared_and_provider_variants(tmp_path, monkeypatch):
     write_role(builtins / "builder.codex.md", "---\ntype: task\n---\nCodex only.\n")
     monkeypatch.setattr(roles, "BUILTIN_DIR", builtins)
     roles.eject(tmp_path, "builder")
-    shared = tmp_path / "shiptrail/roles/builder.md"
+    shared = tmp_path / ".shiptrail/roles/builder.md"
     assert "Codex only" not in shared.read_text()
     roles.eject(tmp_path, "builder", "codex")
     assert "Codex only" in resolve_role("builder", "codex", root=tmp_path).text

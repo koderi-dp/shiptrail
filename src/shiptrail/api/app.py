@@ -105,7 +105,7 @@ def confined(root: Path, path: str) -> Path:
     value = Path(path)
     target = (root / value).resolve()
     if value.is_absolute() or target == root.resolve() or not target.is_relative_to(root.resolve()):
-        raise HTTPException(403, "File path escapes shiptrail/jobs")
+        raise HTTPException(403, "File path escapes .shiptrail/jobs")
     return target
 
 
@@ -211,7 +211,7 @@ def create_app(*,
             row = attempt()
             if row is None:
                 raise HTTPException(404, "Unknown attempt")
-            path = confined(root / "shiptrail/jobs", f"{row['job_id']}/{row['dir']}/events.jsonl")
+            path = confined(root / ".shiptrail/jobs", f"{row['job_id']}/{row['dir']}/events.jsonl")
 
         def finished():
             with engine().lock:
@@ -310,7 +310,7 @@ def create_app(*,
         with engine().lock:
             root, _ = engine().repo(repo)
             engine().snapshot(repo, job_id)
-            folder = confined(root / "shiptrail/jobs", job_id)
+            folder = confined(root / ".shiptrail/jobs", job_id)
             target = confined(folder, path)
             if not target.is_file():
                 raise HTTPException(404, "File not found")
@@ -328,7 +328,8 @@ def create_app(*,
                 (attempt_id, )).fetchone())
             if row is None:
                 raise HTTPException(404, "Unknown attempt")
-            target = confined(root / "shiptrail/jobs", f"{row['job_id']}/{row['dir']}/events.jsonl")
+            target = confined(root / ".shiptrail/jobs",
+                              f"{row['job_id']}/{row['dir']}/events.jsonl")
             try:
                 with target.open("rb") as stream:
                     stream.seek(offset)
@@ -374,7 +375,7 @@ def create_app(*,
             if not versioning.matches(__version__, parsed.engine):
                 raise versioning.VersionMismatch(
                     f"Config requires shiptrail {parsed.engine}; installed {__version__}")
-            run_cli.atomic_json(root / "shiptrail/config.json", parsed.model_dump())
+            run_cli.atomic_json(root / ".shiptrail/config.json", parsed.model_dump())
 
             def event(connection):
                 with db.tx(connection):
@@ -440,7 +441,7 @@ def create_app(*,
     def list_backlog(repo: str) -> dict:
         with engine().lock:
             root, _ = engine().repo(repo)
-            path = root / "shiptrail/backlog.md"
+            path = root / ".shiptrail/backlog.md"
             return {"backlog": backlog.items(path), "started": backlog.started(path)}
 
     @app.put("/api/repos/{repo}/backlog/meta")

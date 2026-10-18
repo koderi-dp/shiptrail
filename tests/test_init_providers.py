@@ -78,7 +78,7 @@ def test_init_installs_shortcuts_for_exactly_the_tools_it_is_given(repo):  # noq
     assert "wrote: .claude/skills/shiptrail/SKILL.md" in messages
     assert "wrote: .agents/skills/shiptrail/SKILL.md" in messages
     assert not (repo / ".opencode").exists()
-    config = json.loads((repo / "shiptrail/config.json").read_text(encoding="utf-8"))
+    config = json.loads((repo / ".shiptrail/config.json").read_text(encoding="utf-8"))
     providers = {
         e["provider"]
         for steps in config["pipelines"].values()
@@ -89,7 +89,7 @@ def test_init_installs_shortcuts_for_exactly_the_tools_it_is_given(repo):  # noq
 
 
 def stage_providers(repo):
-    config = json.loads((repo / "shiptrail/config.json").read_text(encoding="utf-8"))
+    config = json.loads((repo / ".shiptrail/config.json").read_text(encoding="utf-8"))
     return [(name, e["id"], e["provider"]) for name, steps in config["pipelines"].items()
             for s in steps for e in s.get("parallel", [s])]
 
@@ -120,7 +120,7 @@ def test_cli_uses_the_only_tool_without_asking(repo, monkeypatch, capsys):  # no
     out = capsys.readouterr().out
     assert "Using Claude Code for every stage" in out
     assert "would write: .claude/skills/shiptrail/SKILL.md" in out
-    assert not (repo / "shiptrail").exists()
+    assert not (repo / ".shiptrail").exists()
 
 
 def test_cli_without_a_terminal_starts_on_the_first_tool_and_says_so(repo, monkeypatch,
@@ -136,7 +136,7 @@ def test_cli_stops_before_writing_when_no_tool_is_installed(repo, monkeypatch,
                                                             capsys):  # noqa: F811
     assert run_init(repo, monkeypatch, tools()) == 1
     assert "Install Claude Code, Codex or OpenCode" in capsys.readouterr().err
-    assert not (repo / "shiptrail").exists()
+    assert not (repo / ".shiptrail").exists()
 
 
 def test_cli_menu_lets_the_user_pick_by_number(repo, monkeypatch, capsys):  # noqa: F811
@@ -145,7 +145,7 @@ def test_cli_menu_lets_the_user_pick_by_number(repo, monkeypatch, capsys):  # no
     assert run_init(repo, monkeypatch, tools(claude="ready", codex="ready")) == 0
     out = capsys.readouterr().out
     assert "1) Claude Code" in out and "2) Codex" in out and "3) Mixed" in out
-    config = json.loads((repo / "shiptrail/config.json").read_text(encoding="utf-8"))
+    config = json.loads((repo / ".shiptrail/config.json").read_text(encoding="utf-8"))
     providers = {
         e["provider"]
         for steps in config["pipelines"].values()
@@ -161,7 +161,7 @@ def test_cli_menu_rejects_an_answer_outside_the_list(repo, monkeypatch, capsys):
     monkeypatch.setattr("builtins.input", lambda prompt: "9")
     assert run_init(repo, monkeypatch, tools(claude="ready", codex="ready")) == 1
     assert "Pick a number from 1 to 3." in capsys.readouterr().err
-    assert not (repo / "shiptrail").exists()
+    assert not (repo / ".shiptrail").exists()
 
 
 def test_an_explicit_provider_skips_detection(repo, monkeypatch, capsys):  # noqa: F811
@@ -220,10 +220,10 @@ def _status(root):
 def test_init_in_an_existing_repo_commits_only_what_it_wrote(repo):  # noqa: F811
     (repo / "notes.txt").write_text("mine", encoding="utf-8")
     messages = scaffold.init(repo, "codex")
-    assert any(m.startswith("committed: ") and "shiptrail/config.json" in m for m in messages)
+    assert any(m.startswith("committed: ") and ".shiptrail/config.json" in m for m in messages)
     assert gitops.checked("log", "-1", "--format=%s", cwd=repo) == "Add shiptrail setup"
     files = gitops.checked("show", "--name-only", "--format=", "HEAD", cwd=repo).split()
-    assert {"shiptrail/config.json", "shiptrail/backlog.md", ".gitignore"} <= set(files)
+    assert {".shiptrail/config.json", ".shiptrail/backlog.md", ".gitignore"} <= set(files)
     assert "notes.txt" not in files
     assert _status(repo) == ["?? notes.txt"]
     # A second run has nothing new to write, so it commits nothing.
@@ -240,10 +240,10 @@ def test_init_leaves_a_gitignore_with_unfinished_edits_uncommitted(repo):  # noq
     messages = scaffold.init(repo, "codex")
     assert any("already had uncommitted changes" in m for m in messages)
     files = gitops.checked("show", "--name-only", "--format=", "HEAD", cwd=repo).split()
-    assert ".gitignore" not in files and "shiptrail/config.json" in files
+    assert ".gitignore" not in files and ".shiptrail/config.json" in files
     assert _status(repo) == [" M .gitignore"]
     ignore = (repo / ".gitignore").read_text(encoding="utf-8")
-    assert "tmp" in ignore and "/shiptrail/jobs/" in ignore
+    assert "tmp" in ignore and "/.shiptrail/jobs/" in ignore
 
 
 def test_init_says_so_when_git_has_no_name_to_commit_with(repo, monkeypatch):  # noqa: F811
@@ -252,4 +252,4 @@ def test_init_says_so_when_git_has_no_name_to_commit_with(repo, monkeypatch):  #
     messages = scaffold.init(repo, "codex")
     assert any(m.startswith("not committed: git needs your name and email") for m in messages)
     assert gitops.head(repo) == head
-    assert (repo / "shiptrail/config.json").exists()
+    assert (repo / ".shiptrail/config.json").exists()

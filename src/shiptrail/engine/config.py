@@ -320,7 +320,7 @@ def preview_pipeline(config: RepoConfig, name: str) -> dict[str, Any]:
 
 def load_config(root: str | Path) -> RepoConfig:
     root = Path(root).resolve()
-    raw = json.loads((root / "shiptrail" / "config.json").read_text(encoding="utf-8-sig"))
+    raw = json.loads((root / ".shiptrail" / "config.json").read_text(encoding="utf-8-sig"))
     return validate_config(raw, root=root)
 
 

@@ -347,7 +347,7 @@ def check_human_approval(job: Row, executions: Sequence[Row], *, current_head: s
 
 
 def open_repo(path: str | Path) -> sqlite3.Connection:
-    connection = db.connect(Path(path) / "shiptrail" / "state" / "shiptrail.db")
+    connection = db.connect(Path(path) / ".shiptrail" / "state" / "shiptrail.db")
     try:
         db.migrate(connection, Path(__file__).parent / "migrations" / "repo")
     except BaseException:

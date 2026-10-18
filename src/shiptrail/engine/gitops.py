@@ -194,7 +194,7 @@ def free_ports(connection: sqlite3.Connection, root: Path, job_id: str) -> None:
         "SELECT a.* FROM attempts a JOIN executions e ON e.id=a.execution_id WHERE e.job_id=?",
         (job_id, )).fetchall()
     for row in rows:
-        directory = root / "shiptrail/jobs" / job_id / row["dir"]
+        directory = root / ".shiptrail/jobs" / job_id / row["dir"]
         members = winjob.owned_tree(directory, row["owner_token"])
         live = row["state"] in {"launching", "running"}
         if live or members:
@@ -315,9 +315,9 @@ def delete(root: str | Path,
     root = Path(root).resolve()
     job, _ = pipeline.load(connection, job_id)
     _worktree(root, job)  # Check all absolute targets before any removal (§11).
-    folder = (root / "shiptrail/jobs" / job_id).resolve()
-    if folder.parent != (root / "shiptrail/jobs").resolve():
-        raise GitError("job folder escapes shiptrail/jobs")
+    folder = (root / ".shiptrail/jobs" / job_id).resolve()
+    if folder.parent != (root / ".shiptrail/jobs").resolve():
+        raise GitError("job folder escapes .shiptrail/jobs")
     if job["state"] in {"queued", "running", "paused"} and not force:
         raise GitError(f"{job_id} is still running; stop it first, or pass --force")
     free_ports(connection, root, job_id)

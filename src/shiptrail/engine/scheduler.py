@@ -27,7 +27,7 @@ class Claim:
 
     @property
     def directory(self) -> Path:
-        return self.root / "shiptrail" / "jobs" / self.job["id"] / self.attempt["dir"]
+        return self.root / ".shiptrail" / "jobs" / self.job["id"] / self.attempt["dir"]
 
     @property
     def ports(self) -> tuple[int, ...]:
@@ -60,7 +60,7 @@ class Scheduler:
             for repo in available.values():
                 if repo.id not in self.repos:
                     root = Path(repo.path)
-                    writer = db.Writer(root / "shiptrail/state/shiptrail.db", MIGRATIONS / "repo")
+                    writer = db.Writer(root / ".shiptrail/state/shiptrail.db", MIGRATIONS / "repo")
                     self.repos[repo.id] = (root, writer)
                     # New/returning repos also need recovery before dispatch.
                     self.ready = False

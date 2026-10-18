@@ -100,7 +100,7 @@ def test_role_name_pattern(raw, tmp_path, uses):
 
 def test_role_must_resolve_for_selected_provider(raw, tmp_path):
     raw["pipelines"]["fast"][0]["uses"] = "custom"
-    roles = tmp_path / "shiptrail" / "roles"
+    roles = tmp_path / ".shiptrail" / "roles"
     roles.mkdir(parents=True)
     (roles / "custom.codex.md").write_text("---\ntype: task\n---\nBuild.\n", encoding="utf-8")
     with pytest.raises(ValidationError, match="Paths tried") as exc:

@@ -316,7 +316,7 @@ async function renderSettingsRoute(path: string) {
         name: "builder",
         provider: "codex",
         type: "task",
-        source: "shiptrail/roles/builder.md",
+        source: ".shiptrail/roles/builder.md",
         status: "ejected; built-in has changed since",
         ejectedFrom: "builder@1.0#12345678",
         outdated: true,
@@ -358,7 +358,7 @@ describe("session 3.5 routes", () => {
     expect(html).toContain("build provider");
     expect(html).toContain("approve model");
     expect(html).toContain("Pipeline preview");
-    expect(html).toContain("shiptrail/roles/builder.md");
+    expect(html).toContain(".shiptrail/roles/builder.md");
     expect(html).toContain("ejected; built-in has changed since");
     expect(html).not.toContain("coming in the next");
   });

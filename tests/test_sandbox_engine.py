@@ -45,7 +45,7 @@ def test_six_jobs_across_two_repos(tmp_path_factory, monkeypatch, pipeline_name,
             assert {json.loads(row["usage"])["input"] for row in attempts} == {10}
             for execution in executions:
                 attempt = next(row for row in attempts if row["execution_id"] == execution["id"])
-                directory = root / "shiptrail/jobs" / execution["job_id"] / attempt["dir"]
+                directory = root / ".shiptrail/jobs" / execution["job_id"] / attempt["dir"]
                 assert len(list((directory / "invocations").glob("*.json"))) == 1
                 assigned = json.loads((directory / "bound-ports.json").read_text(encoding="utf-8"))
                 packet = json.loads((directory / "packet.json").read_text(encoding="utf-8"))
@@ -62,7 +62,7 @@ def test_six_jobs_across_two_repos(tmp_path_factory, monkeypatch, pipeline_name,
         assert not sandbox.gitops.checked("worktree", "list", "--porcelain",
                                           cwd=root).count("shiptrail/")
         # Backlog checkboxes are expected user-visible edits on main.
-        assert "- [ ]" not in (root / "shiptrail/backlog.md").read_text(encoding="utf-8")
+        assert "- [ ]" not in (root / ".shiptrail/backlog.md").read_text(encoding="utf-8")
         sandbox.verify_main(root)
     bases = [row[2] for row in result["leases"]]
     assert len(bases) == 6 and len(set(bases)) == 6

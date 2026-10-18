@@ -26,7 +26,7 @@ def main():
         for name in ("alpha", "beta"):
             root = args.root / name
             ids.append(create_repo(root, jobs=0))
-            config_path = root / "shiptrail/config.json"
+            config_path = root / ".shiptrail/config.json"
             config = json.loads(config_path.read_text(encoding="utf-8"))
             task = {
                 "id": "build",
@@ -37,7 +37,7 @@ def main():
                         "model": "fake",
                         "effort": "low"
                     },
-                    "claude": {
+                    "opencode": {
                         "model": "saved-profile",
                         "effort": "low"
                     }
@@ -59,7 +59,7 @@ def main():
                             ("config", "user.email", "e2e@localhost"),
                             ("config", "commit.gpgsign", "false")]:
                 gitops.checked(*command, cwd=root)
-            (root / ".gitignore").write_text("shiptrail/jobs/\nfactory/repo.db*\ninvocations/\n")
+            (root / ".gitignore").write_text(".shiptrail/jobs/\nfactory/repo.db*\ninvocations/\n")
             gitops.checked("add", ".", cwd=root)
             gitops.checked("commit", "-qm", "fixture", cwd=root)
         (args.root / "ready.json").write_text(json.dumps(ids))

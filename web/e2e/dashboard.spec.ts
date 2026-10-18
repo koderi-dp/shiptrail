@@ -87,7 +87,7 @@ test("unsaved provider profiles survive SSE and JSON preview validates steps", a
   });
   await page.goto(`${engine.url}/#/repo/${repo}/settings`);
   await setCustomValue(page, "build model", "unsaved-model");
-  await page.getByLabel("build provider", { exact: true }).selectOption("claude");
+  await page.getByLabel("build provider", { exact: true }).selectOption("opencode");
   await expect(page.getByLabel("build model", { exact: true })).toHaveValue("saved-profile");
   // A real durable event refreshes the settings snapshot while the form is dirty.
   await page.request.post(`${engine.url}/api/repos/${repo}/backlog`, {

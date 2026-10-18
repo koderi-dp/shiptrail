@@ -66,13 +66,13 @@ Plan for C:\path\to\your-project:
   would write: AGENTS.md (starter; edit the TODO lines)
   would write: CLAUDE.md (imports AGENTS.md for Claude Code)
   would commit: AGENTS.md, CLAUDE.md as the first commit on main
-  would write: shiptrail/config.json
-  would write: shiptrail/backlog.md
+  would write: .shiptrail/config.json
+  would write: .shiptrail/backlog.md
   would write: .claude/skills/shiptrail/SKILL.md
   would write: .agents/skills/shiptrail/SKILL.md
   would write: .opencode/skills/shiptrail/SKILL.md
   would update: .gitignore
-  would commit: shiptrail/config.json, shiptrail/backlog.md, .claude/skills/shiptrail/SKILL.md, .agents/skills/shiptrail/SKILL.md, .opencode/skills/shiptrail/SKILL.md, .gitignore as "Add shiptrail setup"
+  would commit: .shiptrail/config.json, .shiptrail/backlog.md, .claude/skills/shiptrail/SKILL.md, .agents/skills/shiptrail/SKILL.md, .opencode/skills/shiptrail/SKILL.md, .gitignore as "Add shiptrail setup"
 Continue? [Y/n]
 ```
 
@@ -88,14 +88,14 @@ What init does:
   instructions file. If git has no name or email configured, it stops and prints the two
   `git config` commands to run.
 - **Existing repository:** uses its current branch as the base branch and records it in
-  `shiptrail/config.json`. Nothing is renamed.
+  `.shiptrail/config.json`. Nothing is renamed.
 - **No `AGENTS.md` or `CLAUDE.md`:** writes a starter with `TODO` lines. With Claude Code alone that is
   `CLAUDE.md`. When other tools share the project it is `AGENTS.md`, plus a `CLAUDE.md` that imports
   it, so every tool reads the same instructions. Edit them to describe
   your install, dev server and checks. If the folder has a `package.json` with `dev`, `test`,
   `build` or `lint` scripts, those commands are filled in.
 
-`init` finishes by committing the files it wrote (the starter instructions, `shiptrail/`, the skill
+`init` finishes by committing the files it wrote (the starter instructions, `.shiptrail/`, the skill
 wrappers and `.gitignore`) as "Add shiptrail setup", and nothing else. A job's working folder is
 made from the committed base branch, so this is what gives the agent your `AGENTS.md`, and it keeps
 those files from blocking the merge later. If `.gitignore` already had unfinished edits, `init`
@@ -126,19 +126,19 @@ Other commands:
 | `shiptrail doctor` | Check tools, logins and ports, with a fix for each problem |
 | `shiptrail dashboard` | Open this repository's dashboard |
 
-You can also add work to `shiptrail/backlog.md` or the dashboard backlog, then start it with
+You can also add work to `.shiptrail/backlog.md` or the dashboard backlog, then start it with
 `shiptrail next`.
 
 ## Define your pipeline
 
-Edit the pipelines in `shiptrail/config.json` or use Dashboard Settings. Full runs a spec,
+Edit the pipelines in `.shiptrail/config.json` or use Dashboard Settings. Full runs a spec,
 builder, parallel reviewers, and approval. Fast uses the shorter implementation and approval
 flow. Configure roles, providers, model and effort per execution, retry limits, and merge
 policy. Jobs retain a snapshot of their pipeline and role instructions, so later settings
 changes affect new jobs only.
 
 In the pipeline editor, Role, Model and Effort are dropdowns. Roles are the built-in ones plus any in
-`shiptrail/roles/`. Models and efforts are read from your installed tools, `codex debug models` and
+`.shiptrail/roles/`. Models and efforts are read from your installed tools, `codex debug models` and
 `opencode models`, which only list metadata and never call a model. The answers are cached for ten
 minutes. Claude Code has no such command, so it offers its aliases. If a tool is missing or does not
 answer, the dropdown falls back to built-in choices and says why. "Custom..." accepts any other value.
@@ -161,19 +161,19 @@ resume, approve, rework and delete. The service listens on localhost only.
 
 ## What a job leaves behind
 
-The repository keeps its configuration and backlog in `shiptrail/`. `shiptrail/backlog.md` keeps
+The repository keeps its configuration and backlog in the hidden `.shiptrail/` folder. `.shiptrail/backlog.md` keeps
 its plain line format; each item's priority and pipeline are kept beside it in the sidecar
-`shiptrail/backlog.meta.json`, which may be deleted safely (items fall back to normal priority
+`.shiptrail/backlog.meta.json`, which may be deleted safely (items fall back to normal priority
 and the default pipeline). The board's columns are not stored: they come from the state of each
 item's job. Job state, reports,
-attempt logs and archived outputs live under `shiptrail/jobs/<job-id>/`; worktrees are kept
+attempt logs and archived outputs live under `.shiptrail/jobs/<job-id>/`; worktrees are kept
 beside the repository until merged or deleted. The exact report set depends on the pipeline.
 The machine registry and service state live in the user data directory (or `SHIPTRAIL_HOME`).
 
 ## Customising
 
 Built-in roles ship with the engine. To customize a role for one repository, run
-`shiptrail eject <role>` and edit the resulting file in `shiptrail/roles/`. The dashboard Settings
+`shiptrail eject <role>` and edit the resulting file in `.shiptrail/roles/`. The dashboard Settings
 page edits pipeline configuration; machine settings control provider executable paths
 (`cli.claude`, `cli.codex`, `cli.opencode`), concurrency and available ports. Ejected roles
 remain repository-local and can be compared with the built-in version using

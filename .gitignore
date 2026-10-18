@@ -1,5 +1,6 @@
 # Runtime state of factory runs
-/shiptrail/jobs/
+/.shiptrail/jobs/
+/.shiptrail/state/
 *.tmp
 
 # Local factory installation

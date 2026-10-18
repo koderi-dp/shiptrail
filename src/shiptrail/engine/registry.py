@@ -41,7 +41,7 @@ def open_registry() -> sqlite3.Connection:
 def register(connection: sqlite3.Connection, path: str | Path) -> Repo:
     display_name = Path(path).expanduser().resolve().name
     path = normalize_repo_path(path)
-    if not (path / "shiptrail" / "config.json").is_file():
+    if not (path / ".shiptrail" / "config.json").is_file():
         raise ValueError(f"Repo is not initialised: {path}")
     normalized = str(path)
     slug = re.sub(r"[^a-z0-9]+", "-", path.name.lower()).strip("-") or "repo"

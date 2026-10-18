@@ -21,11 +21,11 @@ def repo(tmp_path, monkeypatch):
     monkeypatch.setenv("SHIPTRAIL_HOME", str(tmp_path / "machine"))
     root = tmp_path / "app č"
     root.mkdir()
-    (root / "shiptrail").mkdir()
-    (root / "shiptrail/config.json").write_text("{}", encoding="utf-8")
+    (root / ".shiptrail").mkdir()
+    (root / ".shiptrail/config.json").write_text("{}", encoding="utf-8")
     (root / "app.txt").write_text("one\n", encoding="utf-8")
-    (root / ".gitignore").write_text("/shiptrail/state/\n/shiptrail/jobs/\n", encoding="utf-8")
-    (root / "shiptrail/backlog.md").write_text("# Backlog\n", encoding="utf-8")
+    (root / ".gitignore").write_text("/.shiptrail/state/\n/.shiptrail/jobs/\n", encoding="utf-8")
+    (root / ".shiptrail/backlog.md").write_text("# Backlog\n", encoding="utf-8")
     for args in [("init", "-q", "-b", "main"), ("config", "user.name", "test"),
                  ("config", "user.email", "test@localhost"), ("config", "core.autocrlf", "false"),
                  ("config", "commit.gpgsign", "false"), ("add", "."), ("commit", "-qm", "base")]:
@@ -99,7 +99,7 @@ def add_job(repo, job_id="001-test", *, state="approved", change=True):
                         base_head=base,
                         preamble=packet.PREAMBLE,
                         preamble_version=packet.PREAMBLE_VERSION)
-    folder = root / "shiptrail/jobs" / job_id
+    folder = root / ".shiptrail/jobs" / job_id
     folder.mkdir(parents=True)
     (folder / "request.md").write_bytes(b"Verbatim request\r\nwith details.\n")
     if change:
@@ -141,9 +141,9 @@ def test_merge_cleans_worktree_branch_and_releases_lease(repo):
 def test_unrelated_uncommitted_edits_do_not_block(repo):
     root, connection, _, _ = repo
     job = add_job(repo)
-    (root / "shiptrail/backlog.md").write_text("edited\n")
+    (root / ".shiptrail/backlog.md").write_text("edited\n")
     gitops.merge(root, connection, job["id"])
-    assert (root / "shiptrail/backlog.md").read_text() == "edited\n"
+    assert (root / ".shiptrail/backlog.md").read_text() == "edited\n"
 
 
 @pytest.mark.parametrize("reason", ["overlap", "staged", "branch", "detached"])
@@ -209,7 +209,7 @@ def test_delete_removes_files_lease_and_cascades_rows(repo):
     message = gitops.delete(root, connection, job["id"], machine=machine, repo_id=repo_id)
     assert "worktree, branch, job folder" in message
     assert not Path(job["worktree"]).exists()
-    assert not (root / "shiptrail/jobs" / job["id"]).exists()
+    assert not (root / ".shiptrail/jobs" / job["id"]).exists()
     for table in ("jobs", "executions", "attempts"):
         assert not connection.execute(f"SELECT * FROM {table}").fetchall()
     events = connection.execute("SELECT job_id,type,payload FROM events").fetchall()

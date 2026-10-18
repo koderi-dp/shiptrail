@@ -168,7 +168,7 @@ def create_repo(root,
                 model="fake",
                 effort="low"):
     root.mkdir(parents=True)
-    roles = root / "shiptrail/roles"
+    roles = root / ".shiptrail/roles"
     roles.mkdir(parents=True)
     (roles / "gate.md").write_text("---\ntype: approval\n---\nApprove.\n")
     (roles / "review.md").write_text("---\ntype: review\n---\nReview.\n")
@@ -203,7 +203,7 @@ def create_repo(root,
             "perJob": per_job
         }
     }
-    (root / "shiptrail/config.json").write_text(json.dumps(raw))
+    (root / ".shiptrail/config.json").write_text(json.dumps(raw))
     config = RepoConfig.model_validate(raw, context={"root": root})
     connection = pipeline.open_repo(root)
     try:

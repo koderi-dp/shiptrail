@@ -65,7 +65,7 @@ def resolve_role(name: str,
         raise RoleError(f"Invalid role name: {name!r}")
     if provider not in get_args(Provider):
         raise RoleError(f"Unknown provider: {provider!r}")
-    repo_roles = Path(root).resolve() / "shiptrail" / "roles"
+    repo_roles = Path(root).resolve() / ".shiptrail" / "roles"
     builtins = BUILTIN_DIR if builtin_dir is None else Path(builtin_dir).resolve()
     paths = [
         repo_roles / f"{name}.{provider}.md", repo_roles / f"{name}.md",
@@ -127,7 +127,7 @@ def available_roles(root: str | Path) -> dict[str, list[dict[str, str | bool]]]:
     A role that fails to load is left out of the list rather than failing the whole call;
     `resolve_role` still reports the exact error when a stage names it.
     """
-    repo_roles = Path(root).resolve() / "shiptrail" / "roles"
+    repo_roles = Path(root).resolve() / ".shiptrail" / "roles"
     providers = get_args(Provider)
     names = set()
     for directory in (BUILTIN_DIR, repo_roles):
@@ -188,7 +188,7 @@ def eject(root: Path, name: str, provider: Provider | None = None, *, diff: bool
                            root=root,
                            builtin_only=True,
                            shared_only=provider is None)
-    target = root / "shiptrail/roles" / (f"{name}.{provider}.md" if provider else f"{name}.md")
+    target = root / ".shiptrail/roles" / (f"{name}.{provider}.md" if provider else f"{name}.md")
     if diff:
         if not target.is_file():
             raise RoleError(f"No ejected role at {target}")

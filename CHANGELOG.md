@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+- The project folder is now the hidden `.shiptrail/` (it was `shiptrail/`). A project set up with
+  0.1.0 needs it moved: `git mv shiptrail .shiptrail`, then change the two `.gitignore` lines
+  to `/.shiptrail/state/` and `/.shiptrail/jobs/`. `shiptrail init` creates `.shiptrail/` itself.
+- `shiptrail init` commits the files it writes as "Add shiptrail setup".
+- The backlog board follows each item's job, and the job log has a readable Transcript view.
+
 ## [0.1.0] - 2026-10-18
 
 First release under the Shiptrail name. Shiptrail runs a configurable pipeline of Claude Code,

@@ -473,7 +473,7 @@ def test_real_git_head_is_returned_and_unavailable_git_evidence_pauses(store, mo
 
 def test_default_packet_is_written_and_its_bytes_recorded_with_fake_cli(store):
     scheduler, supervisor, context = store
-    folder = context.root / "shiptrail/jobs" / context.job["id"]
+    folder = context.root / ".shiptrail/jobs" / context.job["id"]
     (folder / "request.md").write_text("Approve the committed feature.", encoding="utf-8")
     run_cli.atomic_json(context.directory / "scenario.json", {
         "report": "APPROVE\n",

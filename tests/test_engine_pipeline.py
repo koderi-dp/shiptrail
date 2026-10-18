@@ -36,7 +36,7 @@ class Engine:
         self.connection = pipeline.open_repo(root)
         self.head = "head-1"
         self.job_id = "001-pipe"
-        roles = root / "shiptrail" / "roles"
+        roles = root / ".shiptrail" / "roles"
         roles.mkdir(parents=True)
         for name, kind in (("writer", "task"), ("quality", "review"), ("risk", "review"),
                            ("gate", "approval")):
@@ -100,7 +100,7 @@ class Engine:
             first = (overrides or {}).get(task["exec_id"], first)
             relative = (f"executions/{task['step_id']}.{task['exec_id']}/"
                         f"r{task['round']}/a1/report.md")
-            path = self.root / "shiptrail" / "jobs" / self.job_id / relative
+            path = self.root / ".shiptrail" / "jobs" / self.job_id / relative
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(first + "\n\nEvidence.\n", encoding="utf-8")
             os.utime(path, ns=(1001_000_000_000, 1001_000_000_000))
@@ -129,7 +129,7 @@ def engine(tmp_path):
 
 
 def test_new_writes_full_job_and_history(engine):
-    assert (engine.root / "shiptrail/state/shiptrail.db").is_file()
+    assert (engine.root / ".shiptrail/state/shiptrail.db").is_file()
     job, rows = engine.load()
     assert job["state"] == "queued" and rows == []
     assert (job["seq"], job["round"], job["returns_used"]) == (1, 1, 0)
@@ -171,7 +171,7 @@ def test_custom_pipeline_finishes_with_verify_and_retains_reports(engine):
                                                                          engine.head)
     assert len(rows) == 4 and all(r["state"] == "done" for r in rows)
     for row in rows:
-        assert (engine.root / "shiptrail" / "jobs" / engine.job_id / row["report_path"]).is_file()
+        assert (engine.root / ".shiptrail" / "jobs" / engine.job_id / row["report_path"]).is_file()
     pipeline.check_human_approval(job, rows, current_head=engine.head)
     assert engine.plan() == ()
     assert engine.start().action == "wait"
@@ -211,7 +211,7 @@ def test_retry_is_bounded_and_invalidates_downstream_results(engine):
     job, rows = engine.load()
     assert (job["current_step"], job["returns_used"], job["round"]) == ("draft", 0, 3)
     assert (engine.root /
-            "shiptrail/jobs/001-pipe/rework-1.md").read_text() == "Fix the custom review\n"
+            ".shiptrail/jobs/001-pipe/rework-1.md").read_text() == "Fix the custom review\n"
     engine.finish()
     engine.finish()
     engine.finish()
@@ -296,7 +296,7 @@ def test_pipeline_models_limits_roles_and_preamble_are_frozen(engine):
     draft.update(timeoutMinutes=5, maxBudgetUsd=None)
     draft["profiles"]["codex"]["model"] = "gpt-6-luna"
     engine.raw["pipelines"]["full"].pop(1)
-    path = engine.root / "shiptrail/roles/writer.md"
+    path = engine.root / ".shiptrail/roles/writer.md"
     path.write_text("---\ntype: task\n---\nNew instructions.\n", encoding="utf-8")
     engine.create("002-new")
     new, _ = pipeline.load(engine.connection, "002-new")
@@ -344,7 +344,7 @@ def test_missing_provider_settings_prevents_new_job(engine):
 
 
 def test_selected_provider_uses_its_own_frozen_role(engine):
-    path = engine.root / "shiptrail/roles/writer.codex.md"
+    path = engine.root / ".shiptrail/roles/writer.codex.md"
     path.write_text("---\ntype: task\n---\nCodex instructions.\n", encoding="utf-8")
     engine.create("002-codex")
     path.unlink()
@@ -564,7 +564,7 @@ def test_rework_notes_can_be_recovered_after_file_write_failure(engine, monkeypa
     assert engine.load()[0]["state"] == "running"
     monkeypatch.setattr(pipeline.os, "replace", original)
     pipeline.materialize_rework_notes(engine.connection, engine.job_id)
-    path = engine.root / "shiptrail/jobs/001-pipe/rework-1.md"
+    path = engine.root / ".shiptrail/jobs/001-pipe/rework-1.md"
     assert path.read_text() == "Durable request\n"
     pipeline.materialize_rework_notes(engine.connection, engine.job_id)
     assert not list(path.parent.glob(".rework-*.tmp"))
@@ -578,7 +578,7 @@ def test_rework_notes_keep_numbering_after_events_are_pruned(engine):
         engine.connection.execute("DELETE FROM events WHERE type='note'")
     engine.finish({"draft": "STATUS: BLOCKED"})
     pipeline.rework_job(engine.connection, engine.job_id, "Second note", current_head=engine.head)
-    folder = engine.root / "shiptrail/jobs/001-pipe"
+    folder = engine.root / ".shiptrail/jobs/001-pipe"
     assert (folder / "rework-1.md").read_text() == "First note\n"
     assert (folder / "rework-2.md").read_text() == "Second note\n"
 
@@ -660,7 +660,7 @@ def test_rework_failure_rolls_back_note_and_rewind_together(engine):
     with pytest.raises(sqlite3.IntegrityError, match="note rejected"):
         pipeline.rework_job(engine.connection, engine.job_id, "Again", current_head=engine.head)
     assert engine.load() == before
-    assert not list((engine.root / "shiptrail/jobs/001-pipe").glob("rework-*.md"))
+    assert not list((engine.root / ".shiptrail/jobs/001-pipe").glob("rework-*.md"))
 
 
 @pytest.mark.parametrize("changes", [0, 1, 2])

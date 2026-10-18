@@ -13,7 +13,7 @@ class SandboxBenchTests(unittest.TestCase):
     def test_benchmark_parses_job_history_and_headless_usage(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            jobs = root / "shiptrail" / "jobs"
+            jobs = root / ".shiptrail" / "jobs"
             job_dir = jobs / "001-feature"
             job_dir.mkdir(parents=True)
             fixture = Path(__file__).parent / "fixtures" / "bench-job.json"

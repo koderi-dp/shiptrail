@@ -106,12 +106,12 @@ def upgrade(root: Path, *, dry_run: bool = False) -> str:
     registry or service side effects.
     """
     root = root.resolve()
-    raw = json.loads((root / "shiptrail/config.json").read_text(encoding="utf-8-sig"))
+    raw = json.loads((root / ".shiptrail/config.json").read_text(encoding="utf-8-sig"))
     converted = current_format(raw)
     converted["engine"] = engine_range()
     # Only rewrite the config when its content changes; its formatting is the user's.
     writes = {} if converted == raw else {
-        "shiptrail/config.json": (json.dumps(converted, indent=2) + "\n").encode()
+        ".shiptrail/config.json": (json.dumps(converted, indent=2) + "\n").encode()
     }
     clients = {
         execution["provider"]
@@ -127,7 +127,7 @@ def upgrade(root: Path, *, dry_run: bool = False) -> str:
     ignore = root / ".gitignore"
     content = ignore.read_text(encoding="utf-8") if ignore.exists() else ""
     missing = [
-        line for line in ("/shiptrail/state/", "/shiptrail/jobs/")
+        line for line in ("/.shiptrail/state/", "/.shiptrail/jobs/")
         if line not in content.splitlines()
     ]
     if missing:
@@ -183,7 +183,7 @@ def _identity_configured(root: Path) -> bool:
 def inspect(root: Path) -> Setup:
     """Validate the folder and report its Git and doc state; never writes."""
     root = root.resolve()
-    existing = root / "shiptrail/config.json"
+    existing = root / ".shiptrail/config.json"
     if existing.exists():
         current_format(json.loads(existing.read_text(encoding="utf-8-sig")))
         versioning.check(root)
@@ -294,8 +294,8 @@ def init(root: Path,
                     # tool is not here to the first tool that is.
                     execution["provider"] = available[0]
     files = {
-        "shiptrail/config.json": json.dumps(raw, indent=2) + "\n",
-        "shiptrail/backlog.md": (TEMPLATES / "backlog.md").read_text(encoding="utf-8")
+        ".shiptrail/config.json": json.dumps(raw, indent=2) + "\n",
+        ".shiptrail/backlog.md": (TEMPLATES / "backlog.md").read_text(encoding="utf-8")
     }
     for client, path in CLIENT_SKILLS.items():
         if client in wanted:
@@ -331,7 +331,7 @@ def init(root: Path,
         gitops.git("status", "--porcelain", "--", ".gitignore", cwd=root).stdout.strip()))
     content = ignore.read_text(encoding="utf-8") if ignore.exists() else ""
     missing = [
-        line for line in ("/shiptrail/state/", "/shiptrail/jobs/")
+        line for line in ("/.shiptrail/state/", "/.shiptrail/jobs/")
         if line not in content.splitlines()
     ]
     if missing:

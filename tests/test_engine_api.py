@@ -156,12 +156,12 @@ def test_unknown_repo_and_confined_files(api, tmp_path):
     assert "Files" in client.get(prefix + "request.md").text
     for path in ["%2e%2e%2f%2e%2e%2fconfig.json", "%2Fetc%2Fpasswd", "..%5c..%5cconfig.json"]:
         assert client.get(prefix + path).status_code in {403, 404}
-    secret = root / "shiptrail/jobs" / job_id / "command.json"
+    secret = root / ".shiptrail/jobs" / job_id / "command.json"
     secret.write_text('{"token":"private"}')
     assert client.get(prefix + "command.json").status_code == 403
     outside = tmp_path / "outside.md"
     outside.write_text("outside secret")
-    link = root / "shiptrail/jobs" / job_id / "link.md"
+    link = root / ".shiptrail/jobs" / job_id / "link.md"
     try:
         link.symlink_to(outside)
     except OSError:
@@ -233,9 +233,9 @@ def test_init_exact_files_idempotent_and_dry_run(repo, provider, wrappers):
         for p in repo.rglob("*") if p.is_file() and ".git" not in p.parts
     }
     assert set(after) - set(before) == {
-        "shiptrail/config.json", "shiptrail/backlog.md", ".gitignore", *wrappers
+        ".shiptrail/config.json", ".shiptrail/backlog.md", ".gitignore", *wrappers
     }
-    assert after[".gitignore"] == b"/shiptrail/state/\n/shiptrail/jobs/\n"
+    assert after[".gitignore"] == b"/.shiptrail/state/\n/.shiptrail/jobs/\n"
     for path in wrappers:
         assert b"uv tool install shiptrail" in after[path]
         assert b"keeps running" in after[path]
@@ -256,7 +256,7 @@ def test_init_writes_starter_doc_and_keeps_current_branch(repo):
     scaffold.init(repo, "claude")
     assert "TODO" in (repo / "CLAUDE.md").read_text(encoding="utf-8")
     assert not (repo / "AGENTS.md").exists()
-    config = json.loads((repo / "shiptrail/config.json").read_text(encoding="utf-8"))
+    config = json.loads((repo / ".shiptrail/config.json").read_text(encoding="utf-8"))
     assert config["baseBranch"] == "trunk"
 
 
@@ -284,14 +284,14 @@ def test_init_fresh_folder_creates_repo_on_main_with_first_commit(tmp_path, monk
     # Everything else init wrote is committed too, so jobs start from a complete checkout.
     setup = set(gitops.checked("show", "--name-only", "--format=", "HEAD", cwd=root).split())
     assert {
-        ".gitignore", "shiptrail/config.json", "shiptrail/backlog.md",
+        ".gitignore", ".shiptrail/config.json", ".shiptrail/backlog.md",
         ".agents/skills/shiptrail/SKILL.md"
     } <= setup
     # Only what init wrote is committed; the user's own file is left alone.
     assert gitops.checked("status", "--porcelain", cwd=root) == "?? package.json"
     text = (root / "AGENTS.md").read_text(encoding="utf-8")
     assert "npm run dev" in text and "npm run test" in text
-    config = json.loads((root / "shiptrail/config.json").read_text(encoding="utf-8"))
+    config = json.loads((root / ".shiptrail/config.json").read_text(encoding="utf-8"))
     assert config["baseBranch"] == "main"
 
 
@@ -323,7 +323,7 @@ def test_backlog_details_duplicate_start_and_queue_replay(api):
     client, runtime, repo_id, root = api
     base = f"/api/repos/{repo_id}"
     # Replace the template example with deliberate test items.
-    path = root / "shiptrail/backlog.md"
+    path = root / ".shiptrail/backlog.md"
     path.write_text("# Backlog\n\n- [ ] One\n  detailed **request**\n- [ ] Two\n")
     response = client.post(base + "/backlog",
                            json={
@@ -334,7 +334,7 @@ def test_backlog_details_duplicate_start_and_queue_replay(api):
     assert response.status_code == 200
     job_id = response.json()["id"]
     assert f"- [x] One ({job_id})" in path.read_text()
-    assert "detailed **request**" in (root / "shiptrail/jobs" / job_id / "request.md").read_text()
+    assert "detailed **request**" in (root / ".shiptrail/jobs" / job_id / "request.md").read_text()
     # A crash after DB commit but before checking off the file is repaired.
     path.write_text("# Backlog\n\n- [ ] One\n  detailed **request**\n- [ ] Two\n")
     response = client.post(base + "/backlog",
@@ -368,7 +368,7 @@ def test_backlog_details_duplicate_start_and_queue_replay(api):
 def test_backlog_item_keeps_its_pipeline_and_returns_when_its_job_is_deleted(api):
     client, runtime, repo_id, root = api
     base = f"/api/repos/{repo_id}"
-    (root / "shiptrail/backlog.md").write_text("# Backlog\n")
+    (root / ".shiptrail/backlog.md").write_text("# Backlog\n")
 
     def post(body):
         return client.post(base + "/backlog", json=body, headers=headers())
@@ -396,9 +396,9 @@ def test_backlog_item_keeps_its_pipeline_and_returns_when_its_job_is_deleted(api
 
 def test_start_refuses_a_missing_base_branch_with_a_clear_message(api):
     client, _, repo_id, root = api
-    config = json.loads((root / "shiptrail/config.json").read_text())
+    config = json.loads((root / ".shiptrail/config.json").read_text())
     config["baseBranch"] = "trunk"
-    (root / "shiptrail/config.json").write_text(json.dumps(config))
+    (root / ".shiptrail/config.json").write_text(json.dumps(config))
     response = client.post(f"/api/repos/{repo_id}/jobs", json={"title": "X"}, headers=headers())
     assert response.status_code == 400
     assert "Base branch trunk does not exist" in response.json()["detail"]
@@ -434,10 +434,10 @@ def test_job_stop_resume_delete_and_unsupported_provider(api):
     assert client.post(base + f"/jobs/{job_id}/delete", json={
         "force": True
     }, headers=headers()).status_code == 200
-    assert not (root / "shiptrail/jobs" / job_id).exists()
-    config = json.loads((root / "shiptrail/config.json").read_text())
+    assert not (root / ".shiptrail/jobs" / job_id).exists()
+    config = json.loads((root / ".shiptrail/config.json").read_text())
     config["pipelines"]["fast"][0]["provider"] = "claude"
-    (root / "shiptrail/config.json").write_text(json.dumps(config))
+    (root / ".shiptrail/config.json").write_text(json.dumps(config))
     response = client.post(base + "/jobs",
                            json={
                                "title": "No Claude",
@@ -480,9 +480,9 @@ def test_invalid_engine_specifiers(specifier):
 
 def test_cli_version_gate_exit_codes_registration_and_repo_id(repo, monkeypatch, capsys):
     repo_id = initialise(repo)
-    raw = json.loads((repo / "shiptrail/config.json").read_text())
+    raw = json.loads((repo / ".shiptrail/config.json").read_text())
     raw["engine"] = ">=1.0,<2"
-    (repo / "shiptrail/config.json").write_text(json.dumps(raw))
+    (repo / ".shiptrail/config.json").write_text(json.dumps(raw))
     monkeypatch.setattr(versioning, "__version__", "2.1.0")
     with pytest.raises(versioning.VersionMismatch) as error:
         versioning.check(repo, version="2.1.0")
@@ -491,7 +491,7 @@ def test_cli_version_gate_exit_codes_registration_and_repo_id(repo, monkeypatch,
     assert cli.main(["status"]) == 4
     assert "Install a matching version" in capsys.readouterr().err
     raw["engine"] = ">=0"
-    (repo / "shiptrail/config.json").write_text(json.dumps(raw))
+    (repo / ".shiptrail/config.json").write_text(json.dumps(raw))
     connection = registry.open_registry()
     registry.remove(connection, repo_id)
     assert cli.main(["version"]) == 0
@@ -668,12 +668,12 @@ def test_cli_dispatches_via_api_and_waits(api, monkeypatch, capsys, tmp_path):
     ]) == 0
     output = capsys.readouterr().out
     assert "001-via-cli" in output and "/#/repo/" in output
-    assert "Full request č" in (root /
-                                "shiptrail/jobs/001-via-cli/request.md").read_text(encoding="utf-8")
+    assert "Full request č" in (root / ".shiptrail/jobs/001-via-cli/request.md").read_text(
+        encoding="utf-8")
     assert cli.main(["status", "001-via-cli", "--json"]) == 0
     assert json.loads(capsys.readouterr().out)["job"]["pipeline_name"] == "fast"
-    (root / "shiptrail/backlog.md").write_text("# Backlog\n\n- [ ] Ship the next thing\n",
-                                               encoding="utf-8")
+    (root / ".shiptrail/backlog.md").write_text("# Backlog\n\n- [ ] Ship the next thing\n",
+                                                encoding="utf-8")
     assert cli.main(["next"]) == 0
     assert "002-ship-the-next-thing" in capsys.readouterr().out
     opened = []
@@ -753,7 +753,7 @@ def test_approve_busy_exit_code_and_rework(api, monkeypatch, capsys):
                            headers=headers())
     assert response.status_code == 200
     assert response.json()["job"]["round"] == 2
-    assert (root / "shiptrail/jobs" / second /
+    assert (root / ".shiptrail/jobs" / second /
             "rework-1.md").read_text().strip() == "Change the approach"
 
 
@@ -763,7 +763,7 @@ def test_queue_relinks_existing_job_without_recreating_worktree(api):
         "title": "Recover"
     }, headers=headers()).json()["id"]
     writer = runtime.repo(repo_id)[1]
-    request = root / "shiptrail/jobs" / job_id / "request.md"
+    request = root / ".shiptrail/jobs" / job_id / "request.md"
     request.write_text("Retain this evidence")
 
     def interrupt(connection):
@@ -772,9 +772,9 @@ def test_queue_relinks_existing_job_without_recreating_worktree(api):
 
     writer.call(interrupt)
     gitops.git("worktree", "remove", "--force", str(gitops.worktree_path(root, job_id)), cwd=root)
-    raw = json.loads((root / "shiptrail/config.json").read_text())
+    raw = json.loads((root / ".shiptrail/config.json").read_text())
     raw["engine"] = ">=999"
-    (root / "shiptrail/config.json").write_text(json.dumps(raw))
+    (root / ".shiptrail/config.json").write_text(json.dumps(raw))
     runtime._drain(repo_id, root, writer)
     assert not gitops.worktree_path(root, job_id).exists()
     assert request.read_text() == "Retain this evidence"
@@ -785,7 +785,7 @@ def test_queue_relinks_existing_job_without_recreating_worktree(api):
 @pytest.mark.parametrize("merge", ["auto", "verify"])
 def test_sensitive_fast_merge_through_api(api, merge):
     client, runtime, repo_id, root = api
-    config_path = root / "shiptrail/config.json"
+    config_path = root / ".shiptrail/config.json"
     config = json.loads(config_path.read_text())
     config.update(merge=merge, sensitivePaths=["app.txt"])
     config_path.write_text(json.dumps(config), encoding="utf-8")
@@ -822,7 +822,7 @@ def test_cli_status_with_invalid_current_roles(api, monkeypatch, capsys, json_ou
                              "pipeline": "fast"
                          },
                          headers=headers()).json()["id"]
-    config_path = root / "shiptrail/config.json"
+    config_path = root / ".shiptrail/config.json"
     config = json.loads(config_path.read_text())
     config["pipelines"]["fast"][0]["uses"] = "missing-role"
     config_path.write_text(json.dumps(config), encoding="utf-8")
@@ -881,7 +881,7 @@ def test_eject_cli_and_outdated_status(api, tmp_path, monkeypatch, capsys):
 def test_config_preview_validates_without_saving_or_emitting_events(api):
     client, _, repo_id, root = api
     base = f"/api/repos/{repo_id}"
-    config_path = root / "shiptrail/config.json"
+    config_path = root / ".shiptrail/config.json"
     original = config_path.read_bytes()
     state = client.get(base + "/state").json()
     config = state["config"]
@@ -905,7 +905,7 @@ def test_config_preview_validates_without_saving_or_emitting_events(api):
 def test_config_preview_and_save_share_semantic_validation(api):
     client, _, repo_id, root = api
     base = f"/api/repos/{repo_id}/config"
-    original = (root / "shiptrail/config.json").read_bytes()
+    original = (root / ".shiptrail/config.json").read_bytes()
     config = client.get(base).json()
     config["pipelines"][config["defaultPipeline"]][-1]["onChanges"] = "missing"
     preview = client.post(base + "/validate", json=config, headers=headers())
@@ -913,14 +913,14 @@ def test_config_preview_and_save_share_semantic_validation(api):
     assert preview.status_code == save.status_code == 422
     assert preview.json() == save.json()
     assert "onChanges" in preview.text
-    assert (root / "shiptrail/config.json").read_bytes() == original
+    assert (root / ".shiptrail/config.json").read_bytes() == original
 
 
 @pytest.mark.parametrize("action", ["start", "remove", "reorder"])
 def test_stale_backlog_item_cannot_act_on_next_item(api, action):
     client, runtime, repo_id, root = api
     base = f"/api/repos/{repo_id}"
-    path = root / "shiptrail/backlog.md"
+    path = root / ".shiptrail/backlog.md"
     path.write_text("- [ ] One\n- [ ] Two\n")
     item = client.get(base + "/state").json()["backlog"][0]
     body = {"action": "start", "index": item["index"], "key": item["key"]}
@@ -941,12 +941,12 @@ def test_stale_backlog_item_cannot_act_on_next_item(api, action):
 def test_backlog_meta_defaults_persist_and_prune(api):
     client, runtime, repo_id, root = api
     base = f"/api/repos/{repo_id}"
-    path = root / "shiptrail/backlog.md"
+    path = root / ".shiptrail/backlog.md"
     path.write_text("# Backlog\n\n- [ ] One\n- [ ] Two\n")
     items = client.get(base + "/backlog").json()["backlog"]
     assert [i["priority"] for i in items] == ["normal"] * 2
     assert all("status" not in i for i in items)
-    assert not (root / "shiptrail/backlog.meta.json").exists()
+    assert not (root / ".shiptrail/backlog.meta.json").exists()
     one, two = items
     response = client.put(base + "/backlog/meta",
                           json={
@@ -976,7 +976,7 @@ def test_backlog_meta_defaults_persist_and_prune(api):
                     "key": two["key"]
                 },
                 headers=headers())
-    assert (root / "shiptrail/backlog.meta.json").read_text().strip() == "{}"
+    assert (root / ".shiptrail/backlog.meta.json").read_text().strip() == "{}"
     bad = client.put(base + "/backlog/meta",
                      json={
                          "key": two["key"],
@@ -984,7 +984,7 @@ def test_backlog_meta_defaults_persist_and_prune(api):
                      },
                      headers=headers())
     assert bad.status_code == 400
-    (root / "shiptrail/backlog.meta.json").write_text("not json")
+    (root / ".shiptrail/backlog.meta.json").write_text("not json")
     path.write_text("# Backlog\n\n- [ ] Three\n")
     assert client.get(base + "/backlog").json()["backlog"][0]["priority"] == "normal"
 

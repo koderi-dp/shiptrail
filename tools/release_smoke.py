@@ -82,8 +82,8 @@ def smoke(directory: Path, root: Path) -> None:
     first = snapshot(repo)
     assert set(first) - set(before) == {
         '.gitignore',
-        'shiptrail/config.json',
-        'shiptrail/backlog.md',
+        '.shiptrail/config.json',
+        '.shiptrail/backlog.md',
         '.claude/skills/shiptrail/SKILL.md',
         '.agents/skills/shiptrail/SKILL.md',
     }, set(first) - set(before)
@@ -99,7 +99,7 @@ def smoke(directory: Path, root: Path) -> None:
     run(factory, 'init', '--provider', 'opencode')
     assert snapshot(repo) == second, 'init --provider opencode is not idempotent'
     # init covers every client. Execution stays Codex-only (§17).
-    config_path = repo / 'shiptrail/config.json'
+    config_path = repo / '.shiptrail/config.json'
     config = json.loads(config_path.read_text(encoding='utf-8'))
     for step in config['pipelines']['fast']:
         step['provider'] = 'codex'

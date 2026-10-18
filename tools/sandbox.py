@@ -80,7 +80,7 @@ def new(suite: Path, *, model: str = "gpt-6-luna", effort: str = "low") -> None:
             gitops.checked("add", "-A", cwd=root)
             gitops.checked("commit", "-q", "-m", "Start the todo app", cwd=root)
             scaffold.init(root, "codex")
-            path = root / "shiptrail/config.json"
+            path = root / ".shiptrail/config.json"
             config = json.loads(path.read_text(encoding="utf-8"))
             config.update(defaultPipeline="full", merge="auto", maxRounds=1, permissions="bypass")
             for steps in config["pipelines"].values():
@@ -88,7 +88,7 @@ def new(suite: Path, *, model: str = "gpt-6-luna", effort: str = "low") -> None:
                     for entry in step.get("parallel", [step]):
                         entry["profiles"]["codex"] = {"model": model, "effort": effort}
             run_cli.atomic_json(path, config)
-            (root / "shiptrail/backlog.md").write_text(
+            (root / ".shiptrail/backlog.md").write_text(
                 "# Backlog\n\n" + "".join(f"- [ ] {item}\n" for item in BACKLOG), encoding="utf-8")
             gitops.checked("add", "-A", cwd=root)
             gitops.checked("commit", "-q", "-m", "Configure the v2 sandbox", cwd=root)
@@ -209,7 +209,7 @@ if (document.title !== 'Todos (1)') process.exit(5);
                       "--porcelain",
                       "--",
                       ".",
-                      ":(exclude)shiptrail/backlog.md",
+                      ":(exclude).shiptrail/backlog.md",
                       cwd=root):
         raise AssertionError(f"{root}: main is dirty")
 
@@ -222,7 +222,7 @@ def run(suite: Path,
         resume: bool = False,
         pipeline: str = "full",
         keep_going: bool = False) -> dict:
-    if not all((root / "shiptrail/config.json").exists() for root in repos(suite)):
+    if not all((root / ".shiptrail/config.json").exists() for root in repos(suite)):
         raise ValueError("no v2 sandbox; run new first")
     with isolated_home(suite):
         runtime = Runtime() if real else Runtime({"codex": SandboxAdapter()})
@@ -424,13 +424,13 @@ def _log_usage(path):
 
 def benchmark_rows(sandbox):
     """Read a suite or repo without modifying evidence."""
-    databases = sorted(sandbox.glob("*/shiptrail/state/shiptrail.db"))
-    if (sandbox / "shiptrail/state/shiptrail.db").is_file():
-        databases = [sandbox / "shiptrail/state/shiptrail.db"]
+    databases = sorted(sandbox.glob("*/.shiptrail/state/shiptrail.db"))
+    if (sandbox / ".shiptrail/state/shiptrail.db").is_file():
+        databases = [sandbox / ".shiptrail/state/shiptrail.db"]
     if databases:
         return [row for path in databases for row in _engine_benchmark_rows(path)]
     rows = []
-    jobs_dir = sandbox / "shiptrail" / "jobs"
+    jobs_dir = sandbox / ".shiptrail" / "jobs"
     for path in sorted(jobs_dir.glob("*/job.json")):
         try:
             job = json.loads(path.read_text(encoding="utf-8"))

@@ -18,11 +18,11 @@ def snapshot(root):
 
 def test_upgrade_updates_the_engine_gate_and_leaves_custom_roles_alone(repo):  # noqa: F811
     initialise(repo)
-    config = repo / "shiptrail/config.json"
+    config = repo / ".shiptrail/config.json"
     raw = json.loads(config.read_text())
     raw["engine"] = ">=999,<1000"
     config.write_text(json.dumps(raw))
-    override = repo / "shiptrail/roles/builder.codex.md"
+    override = repo / ".shiptrail/roles/builder.codex.md"
     override.parent.mkdir()
     override.write_text("---\ntype: task\n---\nKeep this text.\n")
     before = override.read_bytes()
@@ -46,14 +46,14 @@ def test_upgrade_dry_run_writes_nothing_and_an_up_to_date_repo_has_nothing_to_do
 
 def test_upgrade_leaves_a_current_config_in_its_own_formatting(repo):  # noqa: F811
     initialise(repo)
-    config = repo / "shiptrail/config.json"
+    config = repo / ".shiptrail/config.json"
     config.write_text(json.dumps(json.loads(config.read_text())), encoding="utf-8")
     assert scaffold.upgrade(repo, dry_run=True) == "Already up to date."
 
 
 def test_upgrade_rejects_a_config_in_an_unsupported_format(repo):  # noqa: F811
     initialise(repo)
-    config = repo / "shiptrail/config.json"
+    config = repo / ".shiptrail/config.json"
     config.write_text(json.dumps({"provider": "codex"}))
     with pytest.raises(ValueError, match="expected 2"):
         scaffold.upgrade(repo)

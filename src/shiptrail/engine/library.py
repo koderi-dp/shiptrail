@@ -52,7 +52,7 @@ def validate_steps(name: str, steps: list[Any]) -> None:
     """Check a pipeline on its own, against the built-in roles only.
 
     A library pipeline must work in any repository, so a role that exists only in one
-    repository's shiptrail/roles is rejected here with the engine's own message.
+    repository's .shiptrail/roles is rejected here with the engine's own message.
     """
     if not NAME.fullmatch(name):
         raise ValueError("Use lowercase letters, digits and dashes, up to 32 characters.")

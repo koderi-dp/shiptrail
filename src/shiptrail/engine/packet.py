@@ -167,7 +167,7 @@ def build(context: Claim, *, executions: Sequence[Mapping[str, Any]] | None = No
     frozen = pipeline._frozen(job)
     step = next(s for s in frozen["pipeline"] if s["id"] == execution["step_id"])
     entry = next(e for e in step["executions"] if e["id"] == execution["exec_id"])
-    folder = (context.root / "shiptrail/jobs" / job["id"]).resolve()
+    folder = (context.root / ".shiptrail/jobs" / job["id"]).resolve()
     report_path = (context.directory / "report.md").resolve()
     if not report_path.is_relative_to(folder):
         raise PacketError(f"Report destination escapes the job folder: {report_path}")

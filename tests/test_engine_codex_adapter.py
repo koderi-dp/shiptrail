@@ -155,7 +155,7 @@ def test_command_and_prompt_use_frozen_profile_machine_path_and_exact_session(
     ]
     assert argv[8] == context.job["worktree"]
     assert argv[9:12] == [
-        "--add-dir", str(context.root / "shiptrail/jobs" / context.job["id"]), flag
+        "--add-dir", str(context.root / ".shiptrail/jobs" / context.job["id"]), flag
     ]
     assert argv[12:] == (["resume", "exact-thread", "-"] if kind == "resume" else ["-"])
     assert prepared.command["cwd"] == context.job["worktree"]
@@ -491,7 +491,7 @@ def test_real_git_head_is_returned_and_unavailable_git_evidence_pauses(store, mo
 
 def test_default_packet_is_written_and_its_bytes_recorded_with_fake_cli(store):
     scheduler, supervisor, context = store
-    folder = context.root / "shiptrail/jobs" / context.job["id"]
+    folder = context.root / ".shiptrail/jobs" / context.job["id"]
     (folder / "request.md").write_text("Approve the committed feature.", encoding="utf-8")
     run_cli.atomic_json(context.directory / "scenario.json", {
         "report": "APPROVE\n",

@@ -160,8 +160,8 @@ class Runtime:
                 return {
                     "jobs": jobs,
                     "executions": executions,
-                    "backlog": backlog.items(root / "shiptrail/backlog.md"),
-                    "started": backlog.started(root / "shiptrail/backlog.md"),
+                    "backlog": backlog.items(root / ".shiptrail/backlog.md"),
+                    "started": backlog.started(root / ".shiptrail/backlog.md"),
                     "config": load_config(root).model_dump(),
                     "last_event_id": last,
                     "activity": activity
@@ -415,7 +415,7 @@ class Runtime:
                     gitops.checked("worktree", "add", str(path), f"shiptrail/{job_id}", cwd=root)
                 else:
                     gitops.create_worktree(root, job_id, config.baseBranch)
-            folder = root / "shiptrail/jobs" / job_id
+            folder = root / ".shiptrail/jobs" / job_id
             folder.mkdir(parents=True, exist_ok=True)
             request = folder / "request.md"
             if not request.exists():
@@ -445,7 +445,7 @@ class Runtime:
         return FileLock(machine_dir() / "runtime" / f"backlog-{digest}.lock")
 
     def _repair_backlog(self, root: Path, writer: db.Writer) -> None:
-        path = root / "shiptrail/backlog.md"
+        path = root / ".shiptrail/backlog.md"
         rows = writer.call(lambda connection: connection.execute(
             "SELECT backlog_key,job_id FROM start_queue WHERE backlog_key IS NOT NULL AND job_id IS NOT NULL"
         ).fetchall())
@@ -465,7 +465,7 @@ class Runtime:
                 run_cli.atomic_write(path, backlog.render(values))
 
     def _reopen_backlog(self, root: Path, job_id: str) -> None:
-        path = root / "shiptrail/backlog.md"
+        path = root / ".shiptrail/backlog.md"
         with self._backlog_lock(root):
             values = backlog.blocks(path)
             if backlog.reopen(values, job_id):
@@ -475,7 +475,7 @@ class Runtime:
         with self.lock:
             root, writer = self.repo(repo_id)
             versioning.check(root)
-            path = root / "shiptrail/backlog.md"
+            path = root / ".shiptrail/backlog.md"
             action = body.get("action")
             names = load_config(root).pipelines
 
@@ -583,7 +583,7 @@ class Runtime:
         with self.lock:
             root, writer = self.repo(repo_id)
             versioning.check(root)
-            path = root / "shiptrail/backlog.md"
+            path = root / ".shiptrail/backlog.md"
             item_key = body.get("key")
             if not isinstance(item_key, str):
                 raise ValueError("key must be the backlog item key")

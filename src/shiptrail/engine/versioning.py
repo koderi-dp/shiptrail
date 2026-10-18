@@ -90,7 +90,7 @@ def matches(version: str, specifier: str) -> bool:
 
 
 def check(root: Path, *, version: str = __version__, new_jobs: bool = False) -> None:
-    raw = json.loads((root / "shiptrail/config.json").read_text(encoding="utf-8-sig"))
+    raw = json.loads((root / ".shiptrail/config.json").read_text(encoding="utf-8-sig"))
     if new_jobs and raw.get("version", 1) != 2:
         raise VersionMismatch(f"{root.name} needs `shiptrail upgrade` before starting new jobs")
     required = raw.get("engine")

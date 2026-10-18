@@ -17,7 +17,7 @@ from shiptrail.paths import find_repo, machine_dir
 HELP = {
     "init": "Set up this folder for shiptrail: asks once, then writes the files",
     "upgrade": "Upgrade an earlier install to the current config version",
-    "eject": "Copy a built-in role into shiptrail/roles/ so you can customise it",
+    "eject": "Copy a built-in role into .shiptrail/roles/ so you can customise it",
     "doctor": "Check tools, logins and ports, and say how to fix each problem",
     "repos": "List, rename or remove registered repositories",
     "start": "Queue a new job with this title",

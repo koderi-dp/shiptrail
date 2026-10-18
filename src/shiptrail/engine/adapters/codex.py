@@ -108,7 +108,7 @@ class CodexAdapter:
             self.settings.cli.codex or shutil.which("codex") or "codex", "exec", "--json", "-m",
             execution["model"], "-c", "model_reasoning_effort=" + json.dumps(execution["effort"]),
             "-C", context.job["worktree"], "--add-dir",
-            str(context.root / "shiptrail/jobs" / context.job["id"]), flag
+            str(context.root / ".shiptrail/jobs" / context.job["id"]), flag
         ]
         if attempt["kind"] == "resume":
             if not attempt["session_id"]:

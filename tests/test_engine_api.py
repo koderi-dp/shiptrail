@@ -384,6 +384,21 @@ def test_backlog_item_keeps_its_pipeline_and_returns_when_its_job_is_deleted(api
     assert [i["title"] for i in state["backlog"]] == ["Item"] and state["started"] == []
 
 
+def test_a_folder_left_by_a_deleted_job_does_not_block_the_next_start(api):
+    client, _, repo_id, root = api
+    base = f"/api/repos/{repo_id}"
+    job_id = client.post(base + "/jobs", json={"title": "Again"}, headers=headers()).json()["id"]
+    assert client.post(base + f"/jobs/{job_id}/delete", json={
+        "force": True
+    }, headers=headers()).status_code == 200
+    # Windows can leave part of a removed worktree behind, such as node_modules.
+    leftover = gitops.worktree_path(root, job_id)
+    (leftover / "node_modules").mkdir(parents=True)
+    response = client.post(base + "/jobs", json={"title": "Again"}, headers=headers())
+    assert response.status_code == 201 and response.json()["id"] == job_id
+    assert gitops.is_worktree(root, leftover)
+
+
 def test_job_stop_resume_delete_and_unsupported_provider(api):
     client, runtime, repo_id, root = api
     base = f"/api/repos/{repo_id}"

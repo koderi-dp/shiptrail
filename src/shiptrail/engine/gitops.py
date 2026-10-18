@@ -12,6 +12,7 @@ import re
 import shutil
 import sqlite3
 import subprocess
+import sys
 import time
 from typing import Any
 
@@ -140,6 +141,33 @@ def _worktree(root: Path, job: Mapping[str, Any]) -> Path:
     return actual
 
 
+def _writable(function, path, _info) -> None:
+    os.chmod(path, 0o700)
+    function(path)
+
+
+def remove_folder(path: Path) -> None:
+    """Delete a folder, read-only files included, retrying briefly for Windows file locks."""
+    for attempt in range(6 if os.name == "nt" else 1):
+        if not path.exists():
+            return
+        handler = {"onexc" if sys.version_info >= (3, 12) else "onerror": _writable}
+        shutil.rmtree(path, **handler)
+        if path.exists() and attempt < 5:
+            time.sleep(1)
+    if path.exists():
+        raise GitError(f"couldn't remove {path}; close any program using it and try again")
+
+
+def is_worktree(root: Path, path: Path) -> bool:
+    listing = checked("worktree", "list", "--porcelain", cwd=root)
+    paths = {
+        Path(line[len("worktree "):]).resolve()
+        for line in listing.splitlines() if line.startswith("worktree ")
+    }
+    return path.resolve() in paths
+
+
 def remove_worktree(root: Path, job: Mapping[str, Any], *, force: bool = False) -> bool:
     path = _worktree(root, job)
     if not path.exists():
@@ -148,6 +176,8 @@ def remove_worktree(root: Path, job: Mapping[str, Any], *, force: bool = False) 
     for attempt in range(6 if os.name == "nt" else 1):
         result = git("worktree", "remove", *(("--force", ) if force else ()), str(path), cwd=root)
         if not result.returncode:
+            # On Windows git can succeed yet leave files behind (often node_modules).
+            remove_folder(path)
             return True
         if os.name == "nt" and attempt < 5:
             time.sleep(1)

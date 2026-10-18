@@ -417,3 +417,18 @@ def test_sensitive_deletions_and_renames(repo):
     gitops.checked("commit", "-qm", "rename and delete", cwd=tree)
     job["approved_head"] = gitops.head(tree)
     assert gitops.sensitive_paths(root, job) == ["auth/key.txt", "old.lock"]
+
+
+def test_remove_folder_deletes_read_only_files_and_is_worktree_tells_leftovers_apart(repo):
+    root, _, _, _ = repo
+    job = add_job(repo, state="needs_human")
+    worktree = Path(job["worktree"])
+    assert gitops.is_worktree(root, worktree)
+    leftover = worktree.parent / "001-leftover"
+    (leftover / "node_modules/pkg").mkdir(parents=True)
+    locked = leftover / "node_modules/pkg/index.js"
+    locked.write_text("x")
+    locked.chmod(0o444)
+    assert not gitops.is_worktree(root, leftover)
+    gitops.remove_folder(leftover)
+    assert not leftover.exists()

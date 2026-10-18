@@ -399,6 +399,9 @@ class Runtime:
                             preamble=packet.PREAMBLE,
                             preamble_version=packet.PREAMBLE_VERSION)
             path = gitops.worktree_path(root, job_id)
+            if path.exists() and not gitops.is_worktree(root, path):
+                # Left behind by a deleted job with the same id; it holds no work of its own.
+                gitops.remove_folder(path)
             if not path.exists():
                 if gitops.branch_exists(root, f"shiptrail/{job_id}"):
                     gitops.checked("worktree", "add", str(path), f"shiptrail/{job_id}", cwd=root)

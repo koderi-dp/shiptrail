@@ -227,8 +227,7 @@ export function PipelineSettingsForm({
               </ul>
             )}
             {config && single && (
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h3 className="text-base font-medium">Editing {name}</h3>
+              <div className="flex flex-wrap items-center justify-end gap-3">
                 <SaveToLibrary name={name} steps={config.pipelines[name] ?? []} />
               </div>
             )}

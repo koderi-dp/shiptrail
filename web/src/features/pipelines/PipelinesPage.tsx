@@ -4,9 +4,27 @@ import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/rea
 import type { z } from "zod";
 import { api, keys, libraryApi, type configSchema, type overviewSchema } from "@/lib/api";
 import { PipelineSettingsForm } from "@/features/settings/PipelineSettingsForm";
+import {
+  addPipeline,
+  addPipelineSteps,
+  canRemovePipeline,
+  pipelineNameError,
+  removePipeline,
+  type Config,
+} from "@/features/settings/model";
 import { Badge } from "@/ui/primitives/badge";
 import { Button } from "@/ui/primitives/button";
 import { Card } from "@/ui/primitives/card";
+import { Input } from "@/ui/primitives/input";
+import { Select } from "@/ui/primitives/select";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/ui/primitives/dialog";
 import { PageHeader } from "@/ui/page-header";
 import { PageShell } from "@/ui/page-shell";
 
@@ -23,7 +41,227 @@ function pipelineText(name: string, steps: Steps) {
   }`;
 }
 
-type Editing = { repo: string; pipeline: string; focusNew: boolean };
+type Editing = { repo: string; pipeline: string };
+
+/** Name a new pipeline and pick what it starts from: one of this repository's, or the library's. */
+function NewPipelineDialog({
+  config,
+  busy,
+  error,
+  onOpenChange,
+  onCreate,
+}: {
+  config: Config;
+  busy: boolean;
+  error?: string;
+  onOpenChange: (open: boolean) => void;
+  onCreate: (name: string, next: Config) => void;
+}) {
+  const library = useQuery({ queryKey: ["library"], queryFn: libraryApi.list });
+  const [name, setName] = useState("");
+  const [source, setSource] = useState(`repo:${config.defaultPipeline}`);
+  const nameError = name ? pipelineNameError(config, name) : undefined;
+  function create() {
+    if (!name || pipelineNameError(config, name)) return;
+    const split = source.indexOf(":");
+    const kind = source.slice(0, split);
+    const from = source.slice(split + 1);
+    const steps = library.data?.pipelines.find((p) => p.name === from)?.steps;
+    onCreate(
+      name,
+      kind === "library" && steps
+        ? addPipelineSteps(config, name, steps)
+        : addPipeline(config, name, from),
+    );
+  }
+  return (
+    <Dialog open onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>New pipeline</DialogTitle>
+        </DialogHeader>
+        <form
+          className="grid gap-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            create();
+          }}
+        >
+          <label>
+            Name
+            <Input
+              autoFocus
+              value={name}
+              placeholder="e.g. docs-only"
+              aria-invalid={nameError ? true : undefined}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </label>
+          {nameError && (
+            <p role="alert" className="text-xs text-danger">
+              {nameError}
+            </p>
+          )}
+          <label>
+            Start from
+            <Select value={source} onChange={(e) => setSource(e.target.value)}>
+              <optgroup label="This repository">
+                {Object.keys(config.pipelines).map((p) => (
+                  <option key={p} value={`repo:${p}`}>
+                    {p}
+                  </option>
+                ))}
+              </optgroup>
+              {!!library.data?.pipelines.length && (
+                <optgroup label="Library">
+                  {library.data.pipelines.map((p) => (
+                    <option key={p.name} value={`library:${p.name}`}>
+                      {p.name}
+                      {p.builtin ? " (built-in)" : ""}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </Select>
+          </label>
+          <p className="text-xs text-muted-foreground">
+            The new pipeline starts as a copy. You can change its steps next.
+          </p>
+          {error && (
+            <p role="alert" className="text-xs text-danger">
+              {error}
+            </p>
+          )}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="outline">
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button loading={busy} disabled={!name || !!nameError || busy}>
+              Create and edit
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** One repository's pipelines: choose the default, create, delete, and open one to edit. */
+function RepoPipelines({
+  repo,
+  heading,
+  config,
+  editing,
+  onEdit,
+}: {
+  repo: { id: string; name: string };
+  heading: string;
+  config: Config;
+  editing?: string;
+  onEdit: (pipeline?: string) => void;
+}) {
+  const client = useQueryClient();
+  const [creating, setCreating] = useState(false);
+  const save = useMutation({
+    mutationFn: (next: Config) => api.saveConfig(repo.id, next),
+    onSuccess: () => void client.invalidateQueries({ queryKey: keys.state(repo.id) }),
+  });
+  return (
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 id={heading} className="text-sm font-medium">
+          {repo.name}
+        </h2>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          icon={Plus}
+          onClick={() => {
+            save.reset();
+            setCreating(true);
+          }}
+        >
+          New pipeline
+        </Button>
+      </div>
+      {save.error && !creating && (
+        <p role="alert" className="text-sm text-danger">
+          {save.error.message}
+        </p>
+      )}
+      <ul className="divide-y divide-border rounded-lg border border-border">
+        {Object.entries(config.pipelines).map(([name, steps]) => {
+          const isDefault = name === config.defaultPipeline;
+          return (
+            <li key={name} className="flex flex-wrap items-center gap-2 p-3 text-sm">
+              <span>{pipelineText(name, steps)}</span>
+              {isDefault && <Badge variant="outline">default</Badge>}
+              {editing === name && <Badge>editing</Badge>}
+              <span className="ml-auto flex flex-wrap gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  aria-label={`Edit pipeline ${name}`}
+                  onClick={() => onEdit(name)}
+                >
+                  Edit
+                </Button>
+                {!isDefault && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    aria-label={`Make ${name} the default pipeline`}
+                    disabled={save.isPending}
+                    onClick={() => save.mutate({ ...config, defaultPipeline: name })}
+                  >
+                    Set as default
+                  </Button>
+                )}
+                {canRemovePipeline(config, name) && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    aria-label={`Delete pipeline ${name}`}
+                    disabled={save.isPending}
+                    onClick={() => {
+                      if (!window.confirm(`Delete the ${name} pipeline from ${repo.name}?`)) return;
+                      if (editing === name) onEdit(undefined);
+                      save.mutate(removePipeline(config, name));
+                    }}
+                  >
+                    Delete
+                  </Button>
+                )}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      {creating && (
+        <NewPipelineDialog
+          config={config}
+          busy={save.isPending}
+          error={save.error?.message}
+          onOpenChange={setCreating}
+          onCreate={(name, next) =>
+            save.mutate(next, {
+              onSuccess: () => {
+                setCreating(false);
+                onEdit(name);
+              },
+            })
+          }
+        />
+      )}
+    </>
+  );
+}
 
 export function PipelinesPage({ repos }: z.infer<typeof overviewSchema>) {
   const [editing, setEditing] = useState<Editing>();
@@ -51,7 +289,7 @@ export function PipelinesPage({ repos }: z.infer<typeof overviewSchema>) {
           Library
         </h2>
         <p className="text-xs text-muted-foreground">
-          Pipelines saved on this machine. Adding one to a repository copies it into that
+          Pipelines saved on this machine. Starting a new pipeline from one copies it into that
           repository&apos;s config, so the repository keeps working for anyone who clones it.
         </p>
         {library.error && (
@@ -96,27 +334,16 @@ export function PipelinesPage({ repos }: z.infer<typeof overviewSchema>) {
         const heading = `pipelines-${repo.id}`;
         return (
           <section key={repo.id} aria-labelledby={heading} className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 id={heading} className="text-sm font-medium">
-                {repo.name}
-              </h2>
-              {repo.status === "available" && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  icon={Plus}
-                  onClick={() => setEditing({ repo: repo.id, pipeline: "", focusNew: true })}
-                >
-                  New pipeline
-                </Button>
-              )}
-            </div>
             {repo.status !== "available" ? (
-              <p className="text-sm text-warn-fg">
-                {repo.status === "missing" ? "Repository missing" : "Upgrade required"}
-                {repo.detail ? ` · ${repo.detail}` : ""}
-              </p>
+              <>
+                <h2 id={heading} className="text-sm font-medium">
+                  {repo.name}
+                </h2>
+                <p className="text-sm text-warn-fg">
+                  {repo.status === "missing" ? "Repository missing" : "Upgrade required"}
+                  {repo.detail ? ` · ${repo.detail}` : ""}
+                </p>
+              </>
             ) : query.isPending ? (
               <p role="status" className="text-sm text-muted-foreground">
                 Loading pipelines…
@@ -126,35 +353,23 @@ export function PipelinesPage({ repos }: z.infer<typeof overviewSchema>) {
                 Could not load pipelines: {query.error.message}
               </p>
             ) : (
-              <ul className="divide-y divide-border rounded-lg border border-border">
-                {Object.entries(query.data.config.pipelines).map(([name, steps]) => (
-                  <li key={name} className="flex flex-wrap items-center gap-3 p-3 text-sm">
-                    <span>{pipelineText(name, steps)}</span>
-                    {name === query.data.config.defaultPipeline && (
-                      <Badge variant="outline">default</Badge>
-                    )}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="ml-auto"
-                      aria-label={`Edit pipeline ${name}`}
-                      onClick={() => setEditing({ repo: repo.id, pipeline: name, focusNew: false })}
-                    >
-                      Edit
-                    </Button>
-                  </li>
-                ))}
-              </ul>
+              <RepoPipelines
+                repo={repo}
+                heading={heading}
+                config={query.data.config}
+                editing={editing?.repo === repo.id ? editing.pipeline : undefined}
+                onEdit={(pipeline) =>
+                  setEditing(pipeline ? { repo: repo.id, pipeline } : undefined)
+                }
+              />
             )}
             {editing?.repo === repo.id && (
               <Card className="grid gap-4 p-4">
-                <h3 className="text-sm font-medium">Edit pipelines · {repo.name}</h3>
                 <PipelineSettingsForm
-                  key={`${editing.repo}:${editing.pipeline}:${editing.focusNew}`}
+                  key={`${editing.repo}:${editing.pipeline}`}
                   repo={repo.id}
                   initialPipeline={editing.pipeline}
-                  focusNew={editing.focusNew}
+                  single
                   onClose={() => setEditing(undefined)}
                 />
               </Card>

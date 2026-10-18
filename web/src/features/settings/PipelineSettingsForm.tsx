@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { stepSchema } from "@/features/board/model";
 import { useEffect, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { api, keys, settingsApi, type PipelinePreview } from "@/lib/api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { BookUp } from "lucide-react";
+import { api, keys, libraryApi, settingsApi, type PipelinePreview } from "@/lib/api";
 import { Button } from "@/ui/primitives/button";
 import { Select } from "@/ui/primitives/select";
 import { SettingsSaveFooter } from "@/ui/settings-section";
@@ -33,7 +34,42 @@ type Props = {
   focusNew?: boolean;
   /** Renders a Close button, enabled once there is nothing unsaved. */
   onClose?: () => void;
+  /** Edit only `initialPipeline`: no default, switch, create or delete controls. */
+  single?: boolean;
 };
+
+/** Copy one pipeline into this machine's library. */
+function SaveToLibrary({ name, steps }: { name: string; steps: unknown[] }) {
+  const client = useQueryClient();
+  const store = useMutation({
+    mutationFn: () => libraryApi.save(name, steps),
+    onSuccess: () => void client.invalidateQueries({ queryKey: ["library"] }),
+  });
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        icon={BookUp}
+        disabled={store.isPending}
+        onClick={() => store.mutate()}
+      >
+        Save to library
+      </Button>
+      {store.isSuccess && (
+        <span role="status" className="text-xs text-muted-foreground">
+          Saved {name} to the library.
+        </span>
+      )}
+      {store.error && (
+        <span role="alert" className="text-xs text-danger">
+          Not saved to the library: {store.error.message}
+        </span>
+      )}
+    </div>
+  );
+}
 
 /** Edit, create and delete a repository's pipelines, with live validation and a preview. */
 export function PipelineSettingsForm({
@@ -42,6 +78,7 @@ export function PipelineSettingsForm({
   showJson = false,
   focusNew = false,
   onClose,
+  single = false,
 }: Props) {
   const state = useQuery({ queryKey: keys.state(repo), queryFn: () => api.state(repo) });
   const roles = useQuery({
@@ -189,7 +226,13 @@ export function PipelineSettingsForm({
                 ))}
               </ul>
             )}
-            {config && (
+            {config && single && (
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h3 className="text-base font-medium">Editing {name}</h3>
+                <SaveToLibrary name={name} steps={config.pipelines[name] ?? []} />
+              </div>
+            )}
+            {config && !single && (
               <>
                 <label>
                   Default pipeline
@@ -222,6 +265,10 @@ export function PipelineSettingsForm({
                   onChange={update}
                   autoFocus={focusNew}
                 />
+              </>
+            )}
+            {config && (
+              <>
                 <PipelineEditor
                   config={config}
                   name={name}

@@ -587,14 +587,11 @@ class Runtime:
             item_key = body.get("key")
             if not isinstance(item_key, str):
                 raise ValueError("key must be the backlog item key")
-            priority, status = body.get("priority"), body.get("status")
-            if priority is None and status is None:
-                raise ValueError("priority or status is required")
-            for value in (priority, status):
-                if value is not None and not isinstance(value, str):
-                    raise ValueError("priority and status must be text")
+            priority = body.get("priority")
+            if not isinstance(priority, str):
+                raise ValueError("priority is required and must be text")
             with self._backlog_lock(root):
-                data = backlog.update_meta(path, item_key, priority=priority, status=status)
+                data = backlog.update_meta(path, item_key, priority=priority)
                 run_cli.atomic_write(backlog.meta_path(path), data)
 
             def event(connection: sqlite3.Connection) -> None:

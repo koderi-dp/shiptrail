@@ -934,7 +934,8 @@ def test_backlog_meta_defaults_persist_and_prune(api):
     path = root / "shiptrail/backlog.md"
     path.write_text("# Backlog\n\n- [ ] One\n- [ ] Two\n")
     items = client.get(base + "/backlog").json()["backlog"]
-    assert [(i["priority"], i["status"]) for i in items] == [("normal", "ready")] * 2
+    assert [i["priority"] for i in items] == ["normal"] * 2
+    assert all("status" not in i for i in items)
     assert not (root / "shiptrail/backlog.meta.json").exists()
     one, two = items
     response = client.put(base + "/backlog/meta",
@@ -947,18 +948,16 @@ def test_backlog_meta_defaults_persist_and_prune(api):
     client.put(base + "/backlog/meta",
                json={
                    "key": two["key"],
-                   "status": "needs_input"
+                   "priority": "low"
                },
                headers=headers())
     state = client.get(base + "/state").json()["backlog"]
-    assert [(i["priority"], i["status"]) for i in state] == [("high", "ready"),
-                                                             ("normal", "needs_input")]
+    assert [i["priority"] for i in state] == ["high", "low"]
     assert path.read_text() == "# Backlog\n\n- [ ] One\n- [ ] Two\n"
     # Hand-removing an item keeps the other item's metadata.
     path.write_text("# Backlog\n\n- [ ] Two\n")
     state = client.get(base + "/backlog").json()["backlog"]
-    assert [(i["title"], i["priority"], i["status"])
-            for i in state] == [("Two", "normal", "needs_input")]
+    assert [(i["title"], i["priority"]) for i in state] == [("Two", "low")]
     # Removal through the dashboard prunes the sidecar.
     client.post(base + "/backlog",
                 json={

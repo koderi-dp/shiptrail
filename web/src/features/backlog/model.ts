@@ -1,26 +1,13 @@
-import type { BacklogPriority, BacklogStatus } from "@/lib/api";
+import type { BacklogPriority, StartedBacklogItem } from "@/lib/api";
 
-export const backlogStatuses: readonly BacklogStatus[] = [
-  "ready",
-  "in_progress",
-  "needs_input",
-  "completed",
-];
 export const backlogPriorities: readonly BacklogPriority[] = ["high", "normal", "low"];
 
-const statusLabels: Record<BacklogStatus, string> = {
-  ready: "Ready",
-  in_progress: "In progress",
-  needs_input: "Needs input",
-  completed: "Completed",
-};
 const priorityLabels: Record<BacklogPriority, string> = {
   high: "High",
   normal: "Normal",
   low: "Low",
 };
 
-export const statusLabel = (status: BacklogStatus) => statusLabels[status];
 export const priorityLabel = (priority: BacklogPriority) => priorityLabels[priority];
 
 export type BacklogItem = {
@@ -29,40 +16,67 @@ export type BacklogItem = {
   title: string;
   details: string;
   priority: BacklogPriority;
-  status: BacklogStatus;
-};
-export type BacklogTarget = { status: BacklogStatus; priority: BacklogPriority };
-export type KanbanColumn = {
-  status: BacklogStatus;
-  label: string;
-  count: number;
-  groups: { priority: BacklogPriority; label: string; items: BacklogItem[] }[];
+  pipeline?: string | null;
 };
 
-export function kanbanColumns(backlog: readonly BacklogItem[]): KanbanColumn[] {
-  const ordered = [...backlog].sort((a, b) => a.index - b.index);
-  return backlogStatuses.map((status) => ({
-    status,
-    label: statusLabel(status),
-    count: ordered.filter((item) => item.status === status).length,
-    groups: backlogPriorities.map((priority) => ({
-      priority,
-      label: priorityLabel(priority),
-      items: ordered.filter((item) => item.status === status && item.priority === priority),
-    })),
-  }));
+/** Board columns. Where an item sits is decided by its job, never set by hand. */
+export type BoardColumnId = "ready" | "in_progress" | "needs_input" | "completed";
+
+export const boardColumnLabels: Record<BoardColumnId, string> = {
+  ready: "Ready",
+  in_progress: "In progress",
+  needs_input: "Needs input",
+  completed: "Completed",
+};
+
+/** The column of a started item, from the state of its job. */
+export function columnForJob(state: string | undefined): BoardColumnId {
+  switch (state) {
+    case "paused":
+    case "needs_human":
+      return "needs_input";
+    case "merged":
+    case "cancelled":
+      return "completed";
+    default:
+      return "in_progress";
+  }
 }
 
-export function metaChange(
-  item: Pick<BacklogItem, "key" | "status" | "priority">,
-  target: BacklogTarget,
-): { key: string; status?: BacklogStatus; priority?: BacklogPriority } | null {
-  const status = target.status !== item.status;
-  const priority = target.priority !== item.priority;
-  if (!status && !priority) return null;
-  return {
-    key: item.key,
-    ...(status ? { status: target.status } : {}),
-    ...(priority ? { priority: target.priority } : {}),
-  };
+export type StartedCard = StartedBacklogItem & { state: string | undefined };
+
+export type BoardColumn = {
+  id: BoardColumnId;
+  label: string;
+  count: number;
+  /** Ready only: waiting items, grouped by priority. */
+  groups?: { priority: BacklogPriority; label: string; items: BacklogItem[] }[];
+  /** Every other column: started items, with the state of their job. */
+  started?: StartedCard[];
+};
+
+export function boardColumns(
+  backlog: readonly BacklogItem[],
+  started: readonly StartedBacklogItem[],
+  jobs: readonly { id: string; state: string }[],
+): BoardColumn[] {
+  const ordered = [...backlog].sort((a, b) => a.index - b.index);
+  const states = new Map(jobs.map((job) => [job.id, job.state]));
+  const cards = started.map((item) => ({ ...item, state: states.get(item.job) }));
+  return [
+    {
+      id: "ready",
+      label: boardColumnLabels.ready,
+      count: ordered.length,
+      groups: backlogPriorities.map((priority) => ({
+        priority,
+        label: priorityLabel(priority),
+        items: ordered.filter((item) => item.priority === priority),
+      })),
+    },
+    ...(["in_progress", "needs_input", "completed"] as const).map((id) => {
+      const inColumn = cards.filter((card) => columnForJob(card.state) === id);
+      return { id, label: boardColumnLabels[id], count: inColumn.length, started: inColumn };
+    }),
+  ];
 }

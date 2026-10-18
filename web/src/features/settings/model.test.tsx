@@ -307,7 +307,6 @@ async function renderSettingsRoute(path: string) {
         title: "Feature <script>",
         details: "Keep the details",
         priority: "normal",
-        status: "ready",
       },
     ],
   });

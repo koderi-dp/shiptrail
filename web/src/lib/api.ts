@@ -111,9 +111,7 @@ export const configSchema = z.object({
 });
 export const activitySchema = z.object({ attempt_id: id, text: nullableText, at: nullableText });
 export const backlogPrioritySchema = z.enum(["high", "normal", "low"]);
-export const backlogStatusSchema = z.enum(["ready", "in_progress", "needs_input", "completed"]);
 export type BacklogPriority = z.infer<typeof backlogPrioritySchema>;
-export type BacklogStatus = z.infer<typeof backlogStatusSchema>;
 export const backlogSchema = z.array(
   z.object({
     index: id,
@@ -121,7 +119,6 @@ export const backlogSchema = z.array(
     title: z.string(),
     details: z.string(),
     priority: backlogPrioritySchema,
-    status: backlogStatusSchema,
     pipeline: z.string().nullish(),
   }),
 );
@@ -378,10 +375,7 @@ export const api = {
       ]),
       { method: "POST", body: JSON.stringify(body) },
     ),
-  backlogMeta: (
-    repo: string,
-    body: { key: string; priority?: BacklogPriority; status?: BacklogStatus },
-  ) =>
+  backlogMeta: (repo: string, body: { key: string; priority: BacklogPriority }) =>
     request(
       `${repoPath(repo)}/backlog/meta`,
       z.object({ backlog: backlogSchema, started: startedBacklogSchema.default([]) }),

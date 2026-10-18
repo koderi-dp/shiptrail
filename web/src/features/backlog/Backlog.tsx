@@ -17,7 +17,7 @@ import {
   DialogTitle,
 } from "@/ui/primitives/dialog";
 import { BacklogKanban } from "./BacklogKanban";
-import { metaChange, priorityLabel, statusLabel, type BacklogTarget } from "./model";
+import { priorityLabel, type BacklogItem } from "./model";
 
 const textareaClass = "min-h-24 w-full rounded-md border border-border bg-inset p-3 text-sm";
 
@@ -138,9 +138,8 @@ export function Backlog({ repo }: { repo: string }) {
       { onSuccess: () => setEditing(undefined) },
     );
   }
-  function moveMeta(item: Parameters<typeof metaChange>[0], target: BacklogTarget) {
-    const body = metaChange(item, target);
-    if (body && !busy) metaMutation.mutate(body);
+  function setPriority(item: BacklogItem, priority: BacklogItem["priority"]) {
+    if (!busy && priority !== item.priority) metaMutation.mutate({ key: item.key, priority });
   }
   return (
     <PageShell>
@@ -237,7 +236,14 @@ export function Backlog({ repo }: { repo: string }) {
             </TabsList>
           </Tabs>
           {view === "board" && (
-            <BacklogKanban backlog={data.backlog} busy={busy} onMove={moveMeta} />
+            <BacklogKanban
+              repo={repo}
+              backlog={data.backlog}
+              started={data.started ?? []}
+              jobs={data.jobs}
+              busy={busy}
+              onPriority={setPriority}
+            />
           )}
           {view === "list" && !data.backlog.length && (
             <p className="text-muted-foreground">No queued items.</p>
@@ -277,7 +283,6 @@ export function Backlog({ repo }: { repo: string }) {
                       <h2 className="font-medium">{item.title}</h2>
                       <div className="mt-1 flex gap-2">
                         <Badge variant="outline">{priorityLabel(item.priority)}</Badge>
-                        <Badge>{statusLabel(item.status)}</Badge>
                         <Badge variant="outline">
                           {item.pipeline ?? data.config.defaultPipeline}
                         </Badge>

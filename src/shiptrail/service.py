@@ -168,6 +168,25 @@ def ensure(*, port: int | None = None) -> dict[str, Any]:
             child.wait()
 
 
+def _unreachable() -> str:
+    """Why a held service lock gives no usable service.json."""
+    try:
+        data = json.loads((machine_dir() / "service.json").read_text(encoding="utf-8"))
+        pid = data["pid"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return "Service lock is held but service.json is unavailable"
+    try:
+        psutil.Process(pid).create_time()
+    except psutil.AccessDenied:
+        return (f"The background service (process {pid}) is running but this terminal is not "
+                "allowed to inspect it, usually because it was started by a different program "
+                "or with different permissions. Stop it from where it was started, or end "
+                f"process {pid} in Task Manager, then run this again.")
+    except psutil.Error:
+        pass
+    return f"Service lock is held by process {pid} but it does not answer; see logs/service.log"
+
+
 def serve(port: int | None = None, *, open_browser: bool = False) -> int:
     home = machine_dir()
     lock = FileLock(home / "service.lock")
@@ -182,7 +201,7 @@ def serve(port: int | None = None, *, open_browser: bool = False) -> int:
                     webbrowser.open(url(data))
                 return 0
             time.sleep(0.05)
-        raise ServiceError("Service lock is held but service.json is unavailable")
+        raise ServiceError(_unreachable())
     listener = None
     handler = None
     try:

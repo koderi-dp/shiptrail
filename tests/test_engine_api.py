@@ -978,3 +978,17 @@ def test_backlog_meta_defaults_persist_and_prune(api):
     (root / "shiptrail/backlog.meta.json").write_text("not json")
     path.write_text("# Backlog\n\n- [ ] Three\n")
     assert client.get(base + "/backlog").json()["backlog"][0]["priority"] == "normal"
+
+
+def test_unreachable_service_error_names_the_process_and_the_permission_problem(
+        tmp_path, monkeypatch):
+    monkeypatch.setenv("SHIPTRAIL_HOME", str(tmp_path))
+    assert "service.json is unavailable" in service._unreachable()
+    (tmp_path / "service.json").write_text(json.dumps({"pid": 4242}))
+
+    def denied(pid):
+        raise psutil.AccessDenied(pid)
+
+    monkeypatch.setattr(psutil, "Process", denied)
+    message = service._unreachable()
+    assert "4242" in message and "not allowed to inspect" in message

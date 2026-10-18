@@ -16,24 +16,38 @@ const textareaClass = "min-h-24 w-full rounded-md border border-border bg-inset 
 function EditForm({
   item,
   busy,
+  pipelines,
   onSave,
   onCancel,
 }: {
-  item: { key: string; title: string; details: string };
+  item: { key: string; title: string; details: string; pipeline?: string | null };
   busy: boolean;
-  onSave: (text: string, details: string) => void;
+  /** Pipeline names to choose from; omitted for started items, whose pipeline is fixed. */
+  pipelines?: { names: string[]; fallback: string };
+  onSave: (text: string, details: string, pipeline?: string) => void;
   onCancel: () => void;
 }) {
   const [text, setText] = useState(item.title);
   const [body, setBody] = useState(item.details);
+  const [pipeline, setPipeline] = useState(item.pipeline ?? pipelines?.fallback ?? "");
   return (
     <form
       className="grid gap-3"
       onSubmit={(e) => {
         e.preventDefault();
-        onSave(text, body);
+        onSave(text, body, pipelines ? pipeline : undefined);
       }}
     >
+      {pipelines && (
+        <label>
+          Pipeline
+          <Select value={pipeline} onChange={(e) => setPipeline(e.target.value)}>
+            {pipelines.names.map((name) => (
+              <option key={name}>{name}</option>
+            ))}
+          </Select>
+        </label>
+      )}
       <label>
         Title
         <Input required maxLength={300} value={text} onChange={(e) => setText(e.target.value)} />
@@ -108,10 +122,10 @@ export function Backlog({ repo }: { repo: string }) {
     const index = data?.backlog.findIndex((item) => item.key === key) ?? -1;
     if (index >= 0 && index !== to && !busy) mutation.mutate({ action: "reorder", index, to, key });
   }
-  function save(key: string, text: string, details: string) {
+  function save(key: string, text: string, details: string, pipeline?: string) {
     if (busy) return;
     mutation.mutate(
-      { action: "edit", key, text, details },
+      { action: "edit", key, text, details, ...(pipeline ? { pipeline } : {}) },
       { onSuccess: () => setEditing(undefined) },
     );
   }
@@ -136,20 +150,12 @@ export function Backlog({ repo }: { repo: string }) {
       )}
       {data && (
         <>
-          <label>
-            Pipeline
-            <Select value={selected} onChange={(e) => setPipeline(e.target.value)}>
-              {Object.keys(data.config.pipelines).map((name) => (
-                <option key={name}>{name}</option>
-              ))}
-            </Select>
-          </label>
           <form
             className="grid gap-3"
             onSubmit={(e) => {
               e.preventDefault();
               mutation.mutate(
-                { action: "add", text: title, details },
+                { action: "add", text: title, details, pipeline: selected },
                 {
                   onSuccess: () => {
                     setTitle("");
@@ -159,6 +165,14 @@ export function Backlog({ repo }: { repo: string }) {
               );
             }}
           >
+            <label>
+              Pipeline
+              <Select value={selected} onChange={(e) => setPipeline(e.target.value)}>
+                {Object.keys(data.config.pipelines).map((name) => (
+                  <option key={name}>{name}</option>
+                ))}
+              </Select>
+            </label>
             <label>
               Title
               <Input
@@ -224,7 +238,11 @@ export function Backlog({ repo }: { repo: string }) {
                     <EditForm
                       item={item}
                       busy={busy}
-                      onSave={(text, details) => save(item.key, text, details)}
+                      pipelines={{
+                        names: Object.keys(data.config.pipelines),
+                        fallback: data.config.defaultPipeline,
+                      }}
+                      onSave={(text, details, pipeline) => save(item.key, text, details, pipeline)}
                       onCancel={() => setEditing(undefined)}
                     />
                   ) : (
@@ -233,6 +251,9 @@ export function Backlog({ repo }: { repo: string }) {
                       <div className="mt-1 flex gap-2">
                         <Badge variant="outline">{priorityLabel(item.priority)}</Badge>
                         <Badge>{statusLabel(item.status)}</Badge>
+                        <Badge variant="outline">
+                          {item.pipeline ?? data.config.defaultPipeline}
+                        </Badge>
                       </div>
                       <p className="whitespace-pre-wrap text-sm text-muted-foreground">
                         {item.details}
@@ -247,7 +268,7 @@ export function Backlog({ repo }: { repo: string }) {
                           action: "start",
                           index: item.index,
                           key: item.key,
-                          pipeline: selected,
+                          pipeline: item.pipeline ?? data.config.defaultPipeline,
                         })
                       }
                     >

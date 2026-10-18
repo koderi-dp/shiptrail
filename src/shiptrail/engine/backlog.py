@@ -61,6 +61,8 @@ def read_meta(path: Path) -> dict[str, dict[str, str]]:
             values["priority"] = entry["priority"]
         if entry.get("status") in STATUSES:
             values["status"] = entry["status"]
+        if isinstance(entry.get("pipeline"), str) and entry["pipeline"]:
+            values["pipeline"] = entry["pipeline"]
         if values:
             result[item_key] = values
     return result
@@ -87,7 +89,9 @@ def items(path: Path) -> list[dict[str, Any]]:
             "priority":
             entry.get("priority", DEFAULT_PRIORITY),
             "status":
-            entry.get("status", DEFAULT_STATUS)
+            entry.get("status", DEFAULT_STATUS),
+            "pipeline":
+            entry.get("pipeline")
         })
     return result
 
@@ -147,7 +151,9 @@ def update_meta(path: Path,
                 item_key: str,
                 *,
                 priority: str | None = None,
-                status: str | None = None) -> bytes:
+                status: str | None = None,
+                pipeline: str | None = None) -> bytes:
+    """Set an open item's priority, status or pipeline; an empty pipeline clears it."""
     if priority is not None and priority not in PRIORITIES:
         raise ValueError(f"priority must be one of {', '.join(PRIORITIES)}")
     if status is not None and status not in STATUSES:
@@ -161,6 +167,10 @@ def update_meta(path: Path,
         entry["priority"] = priority
     if status is not None:
         entry["status"] = status
+    if pipeline:
+        entry["pipeline"] = pipeline
+    elif pipeline is not None:
+        entry.pop("pipeline", None)
     meta[item_key] = entry
     defaults = {"priority": DEFAULT_PRIORITY, "status": DEFAULT_STATUS}
     full = {k: {**defaults, **v} for k, v in meta.items()}
@@ -176,6 +186,17 @@ def prune_meta(path: Path) -> bytes | None:
     if len(kept) == len(document):
         return None
     return _render_meta(kept)
+
+
+def reopen(values: list[dict[str, Any]], job_id: str) -> bool:
+    """Put the item started as `job_id` back in the queue; True when one was found."""
+    for block in values:
+        match = STARTED.match(block["lines"][0])
+        if not block["open"] and match and match[2] == job_id:
+            block["lines"][0] = f"- [ ] {match[1]}"
+            block["open"] = True
+            return True
+    return False
 
 
 def render(values: list[dict[str, Any]]) -> bytes:

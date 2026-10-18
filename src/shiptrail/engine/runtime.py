@@ -453,12 +453,29 @@ class Runtime:
             if changed:
                 run_cli.atomic_write(path, backlog.render(values))
 
+    def _reopen_backlog(self, root: Path, job_id: str) -> None:
+        path = root / "shiptrail/backlog.md"
+        with self._backlog_lock(root):
+            values = backlog.blocks(path)
+            if backlog.reopen(values, job_id):
+                run_cli.atomic_write(path, backlog.render(values))
+
     def edit_backlog(self, repo_id: str, body: dict[str, Any]) -> dict[str, Any]:
         with self.lock:
             root, writer = self.repo(repo_id)
             versioning.check(root)
             path = root / "shiptrail/backlog.md"
             action = body.get("action")
+            names = load_config(root).pipelines
+
+            def chosen(value: Any) -> str | None:
+                if value in (None, ""):
+                    return value
+                if value not in names:
+                    raise ValueError(f"Unknown pipeline: {value}")
+                return value
+
+            pipelines: dict[str, str | None] = {}
             # Capture exact item under a file lock. enqueue/replay takes it again.
             with self._backlog_lock(root):
                 values = backlog.blocks(path)
@@ -480,11 +497,15 @@ class Runtime:
                     title = backlog.ITEM.match(block["lines"][0])[2]
                     details = "\n".join(line[2:] if line.startswith("  ") else line
                                         for line in block["lines"][1:])
-                    selected = (title, details, backlog.key(block))
+                    item_pipeline = backlog.read_meta(path).get(backlog.key(block),
+                                                                {}).get("pipeline")
+                    selected = (title, details, backlog.key(block), body.get("pipeline")
+                                or item_pipeline)
                 elif action == "add":
                     entries = body.get("items", [{
                         "text": body.get("text"),
-                        "details": body.get("details", "")
+                        "details": body.get("details", ""),
+                        "pipeline": body.get("pipeline")
                     }])
                     if not isinstance(entries, list) or not 1 <= len(entries) <= 50:
                         raise ValueError("items must contain 1 to 50 features")
@@ -492,7 +513,10 @@ class Runtime:
                         title = entry.get("text") if isinstance(entry, dict) else None
                         details = entry.get("details", "") if isinstance(entry, dict) else None
                         title = backlog.validate_entry(title, details)
-                        values.append({"open": True, "lines": backlog.block_lines(title, details)})
+                        block = {"open": True, "lines": backlog.block_lines(title, details)}
+                        values.append(block)
+                        if entry.get("pipeline"):
+                            pipelines[backlog.key(block)] = chosen(entry["pipeline"])
                 elif action == "edit":
                     old_key = body.get("key")
                     block = next((b for b in values if backlog.key(b) == old_key), None)
@@ -527,9 +551,14 @@ class Runtime:
                     rekeyed = backlog.rekey_meta(path, old_key, backlog.key(block))
                     if rekeyed is not None:
                         run_cli.atomic_write(backlog.meta_path(path), rekeyed)
+                    if "pipeline" in body:
+                        pipelines[backlog.key(block)] = chosen(body["pipeline"])
+                for item_key, name in pipelines.items():
+                    run_cli.atomic_write(backlog.meta_path(path),
+                                         backlog.update_meta(path, item_key, pipeline=name or ""))
             if action == "start":
-                title, details, key = selected
-                return self.enqueue(repo_id, title, details, body.get("pipeline"), backlog_key=key)
+                title, details, key, name = selected
+                return self.enqueue(repo_id, title, details, name, backlog_key=key)
 
             def event(connection: sqlite3.Connection) -> None:
                 with db.tx(connection):
@@ -593,6 +622,7 @@ class Runtime:
                 else:
                     message = writer.call(lambda connection: gitops.delete(
                         root, connection, job_id, force=body.get("force", False)))
+                    self._reopen_backlog(root, job_id)
                 self.supervisor.sync_ports()
                 return {"message": message}
             else:

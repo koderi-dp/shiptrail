@@ -122,6 +122,7 @@ export const backlogSchema = z.array(
     details: z.string(),
     priority: backlogPrioritySchema,
     status: backlogStatusSchema,
+    pipeline: z.string().nullish(),
   }),
 );
 export const startedBacklogSchema = z.array(

@@ -355,6 +355,35 @@ def test_backlog_details_duplicate_start_and_queue_replay(api):
     assert client.get(base + "/state").json()["backlog"][0]["title"] == "Three"
 
 
+def test_backlog_item_keeps_its_pipeline_and_returns_when_its_job_is_deleted(api):
+    client, runtime, repo_id, root = api
+    base = f"/api/repos/{repo_id}"
+    (root / "shiptrail/backlog.md").write_text("# Backlog\n")
+
+    def post(body):
+        return client.post(base + "/backlog", json=body, headers=headers())
+
+    assert post({"action": "add", "text": "Item", "pipeline": "nope"}).status_code == 400
+    assert post({"action": "add", "text": "Item", "pipeline": "full"}).status_code == 200
+    item = client.get(base + "/state").json()["backlog"][0]
+    assert item["pipeline"] == "full"
+    assert post({
+        "action": "edit",
+        "key": item["key"],
+        "text": "Item",
+        "pipeline": "fast"
+    }).status_code == 200
+    item = client.get(base + "/state").json()["backlog"][0]
+    assert item["pipeline"] == "fast"
+    job_id = post({"action": "start", "index": 0, "key": item["key"]}).json()["id"]
+    assert client.get(base + "/state").json()["jobs"][0]["pipeline_name"] == "fast"
+    assert client.post(base + f"/jobs/{job_id}/delete", json={
+        "force": True
+    }, headers=headers()).status_code == 200
+    state = client.get(base + "/state").json()
+    assert [i["title"] for i in state["backlog"]] == ["Item"] and state["started"] == []
+
+
 def test_job_stop_resume_delete_and_unsupported_provider(api):
     client, runtime, repo_id, root = api
     base = f"/api/repos/{repo_id}"

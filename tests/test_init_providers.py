@@ -6,7 +6,7 @@ import subprocess
 import pytest
 
 from shiptrail import cli
-from shiptrail.engine import scaffold
+from shiptrail.engine import gitops, scaffold
 from shiptrail.engine.scaffold import Tool
 from test_engine_api import repo  # noqa: F401  (fixture)
 
@@ -198,7 +198,7 @@ def test_a_fresh_folder_shared_by_tools_commits_both_files(tmp_path, monkeypatch
     assert "would write: CLAUDE.md (imports AGENTS.md for Claude Code)" in plan
     assert "would commit: AGENTS.md, CLAUDE.md as the first commit on main" in plan
     scaffold.init(root, "both", skills=("claude", "codex"))
-    committed = subprocess.run(["git", "show", "--name-only", "--format=", "HEAD"],
+    committed = subprocess.run(["git", "show", "--name-only", "--format=", "HEAD~1"],
                                cwd=root,
                                capture_output=True,
                                text=True,
@@ -211,3 +211,45 @@ def test_an_existing_instructions_file_is_left_alone(repo):  # noqa: F811
     # The fixture repo already has AGENTS.md; init must not add a CLAUDE.md next to it.
     scaffold.init(repo, "both", skills=("claude", "codex"))
     assert not (repo / "CLAUDE.md").exists()
+
+
+def _status(root):
+    return gitops.checked("status", "--porcelain", cwd=root).splitlines()
+
+
+def test_init_in_an_existing_repo_commits_only_what_it_wrote(repo):  # noqa: F811
+    (repo / "notes.txt").write_text("mine", encoding="utf-8")
+    messages = scaffold.init(repo, "codex")
+    assert any(m.startswith("committed: ") and "shiptrail/config.json" in m for m in messages)
+    assert gitops.checked("log", "-1", "--format=%s", cwd=repo) == "Add shiptrail setup"
+    files = gitops.checked("show", "--name-only", "--format=", "HEAD", cwd=repo).split()
+    assert {"shiptrail/config.json", "shiptrail/backlog.md", ".gitignore"} <= set(files)
+    assert "notes.txt" not in files
+    assert _status(repo) == ["?? notes.txt"]
+    # A second run has nothing new to write, so it commits nothing.
+    head = gitops.head(repo)
+    assert not any(m.startswith("committed: ") for m in scaffold.init(repo, "codex"))
+    assert gitops.head(repo) == head
+
+
+def test_init_leaves_a_gitignore_with_unfinished_edits_uncommitted(repo):  # noqa: F811
+    (repo / ".gitignore").write_text("node_modules\n", encoding="utf-8")
+    gitops.checked("add", ".gitignore", cwd=repo)
+    gitops.checked("commit", "-qm", "ignore", cwd=repo)
+    (repo / ".gitignore").write_text("node_modules\ntmp\n", encoding="utf-8")
+    messages = scaffold.init(repo, "codex")
+    assert any("already had uncommitted changes" in m for m in messages)
+    files = gitops.checked("show", "--name-only", "--format=", "HEAD", cwd=repo).split()
+    assert ".gitignore" not in files and "shiptrail/config.json" in files
+    assert _status(repo) == [" M .gitignore"]
+    ignore = (repo / ".gitignore").read_text(encoding="utf-8")
+    assert "tmp" in ignore and "/shiptrail/jobs/" in ignore
+
+
+def test_init_says_so_when_git_has_no_name_to_commit_with(repo, monkeypatch):  # noqa: F811
+    monkeypatch.setattr(scaffold, "_identity_configured", lambda root: False)
+    head = gitops.head(repo)
+    messages = scaffold.init(repo, "codex")
+    assert any(m.startswith("not committed: git needs your name and email") for m in messages)
+    assert gitops.head(repo) == head
+    assert (repo / "shiptrail/config.json").exists()

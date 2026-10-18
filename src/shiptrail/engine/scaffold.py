@@ -301,6 +301,9 @@ def init(root: Path,
         if client in wanted:
             files[path] = (TEMPLATES / f"SKILL.{client}.md").read_text(encoding="utf-8")
     needs_commit = not setup.repo or not setup.commits
+    # Everything this run writes is committed at the end, so a job's working folder (made from
+    # the committed base branch) has the project instructions and nothing blocks its merge.
+    written = [] if needs_commit else [name for name, _ in docs]
     if needs_commit:
         messages.append(f"{'would commit' if dry_run else 'committed'}: {', '.join(committed)} "
                         f"as the first commit on {base}")
@@ -318,10 +321,14 @@ def init(root: Path,
             messages.append(f"unchanged (exists): {name}")
         else:
             messages.append(f"{'would write' if dry_run else 'wrote'}: {name}")
+            written.append(name)
             if not dry_run:
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes(content.encode("utf-8"))
     ignore = root / ".gitignore"
+    # Never commit someone's unfinished edits along with ours.
+    ignore_dirty = (setup.repo and ignore.exists() and bool(
+        gitops.git("status", "--porcelain", "--", ".gitignore", cwd=root).stdout.strip()))
     content = ignore.read_text(encoding="utf-8") if ignore.exists() else ""
     missing = [
         line for line in ("/shiptrail/state/", "/shiptrail/jobs/")
@@ -329,9 +336,33 @@ def init(root: Path,
     ]
     if missing:
         messages.append(f"{'would update' if dry_run else 'updated'}: .gitignore")
+        if ignore_dirty:
+            messages.append(".gitignore already had uncommitted changes, so it is left "
+                            "uncommitted; commit it yourself")
+        else:
+            written.append(".gitignore")
         if not dry_run:
             ignore.write_bytes((content + ("\n" if content and not content.endswith("\n") else "") +
                                 "\n".join(missing) + "\n").encode("utf-8"))
+    if written:
+        if not _identity_configured(root):
+            messages.append("not committed: git needs your name and email (git config --global "
+                            "user.name / user.email); commit the files above yourself")
+        else:
+            messages.append(f"{'would commit' if dry_run else 'committed'}: {', '.join(written)} "
+                            "as \"Add shiptrail setup\"")
+            if not dry_run:
+                try:
+                    gitops.checked("add", "--", *written, cwd=root)
+                    gitops.checked("commit",
+                                   "-q",
+                                   "-m",
+                                   "Add shiptrail setup",
+                                   "--",
+                                   *written,
+                                   cwd=root)
+                except gitops.GitError as error:
+                    messages.append(f"not committed: {error}")
     if not dry_run:
         connection = registry.open_registry()
         try:

@@ -72,6 +72,7 @@ Plan for C:\path\to\your-project:
   would write: .agents/skills/shiptrail/SKILL.md
   would write: .opencode/skills/shiptrail/SKILL.md
   would update: .gitignore
+  would commit: shiptrail/config.json, shiptrail/backlog.md, .claude/skills/shiptrail/SKILL.md, .agents/skills/shiptrail/SKILL.md, .opencode/skills/shiptrail/SKILL.md, .gitignore as "Add shiptrail setup"
 Continue? [Y/n]
 ```
 
@@ -94,8 +95,12 @@ What init does:
   your install, dev server and checks. If the folder has a `package.json` with `dev`, `test`,
   `build` or `lint` scripts, those commands are filled in.
 
-Then commit the shiptrail files (`shiptrail/`, the skill wrapper and `.gitignore`) before the first
-job. The engine never pushes to a remote.
+`init` finishes by committing the files it wrote (the starter instructions, `shiptrail/`, the skill
+wrappers and `.gitignore`) as "Add shiptrail setup", and nothing else. A job's working folder is
+made from the committed base branch, so this is what gives the agent your `AGENTS.md`, and it keeps
+those files from blocking the merge later. If `.gitignore` already had unfinished edits, `init`
+leaves it uncommitted and says so; if git has no name or email, it says that instead of
+committing. The engine never pushes to a remote.
 
 Run `shiptrail --help` for the commands, or `shiptrail <command> --help` for one of them.
 
@@ -157,9 +162,10 @@ resume, approve, rework and delete. The service listens on localhost only.
 ## What a job leaves behind
 
 The repository keeps its configuration and backlog in `shiptrail/`. `shiptrail/backlog.md` keeps
-its plain line format; backlog priority and status are committed beside it in the sidecar
+its plain line format; each item's priority and pipeline are kept beside it in the sidecar
 `shiptrail/backlog.meta.json`, which may be deleted safely (items fall back to normal priority
-and ready status). Job state, reports,
+and the default pipeline). The board's columns are not stored: they come from the state of each
+item's job. Job state, reports,
 attempt logs and archived outputs live under `shiptrail/jobs/<job-id>/`; worktrees are kept
 beside the repository until merged or deleted. The exact report set depends on the pipeline.
 The machine registry and service state live in the user data directory (or `SHIPTRAIL_HOME`).

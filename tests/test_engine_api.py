@@ -46,7 +46,8 @@ def repo(tmp_path, monkeypatch):
 def initialise(root):
     scaffold.init(root, "codex")
     gitops.checked("add", ".", cwd=root)
-    gitops.checked("commit", "-qm", "factory setup", cwd=root)
+    # init already commits what it wrote; this keeps the tests' own files in step too.
+    gitops.checked("commit", "-qm", "factory setup", "--allow-empty", cwd=root)
     connection = registry.open_registry()
     try:
         return registry.register(connection, root).id
@@ -276,9 +277,18 @@ def test_init_fresh_folder_creates_repo_on_main_with_first_commit(tmp_path, monk
     assert not (root / ".git").exists()
     scaffold.init(root, "codex")
     assert gitops.checked("branch", "--show-current", cwd=root) == "main"
-    assert gitops.checked("log", "--format=%s", cwd=root) == "Initial commit: shiptrail setup"
-    assert gitops.checked("show", "--name-only", "--format=", "HEAD",
+    assert gitops.checked("log", "--format=%s",
+                          cwd=root) == "Add shiptrail setup\nInitial commit: shiptrail setup"
+    assert gitops.checked("show", "--name-only", "--format=", "HEAD~1",
                           cwd=root).split() == ["AGENTS.md"]
+    # Everything else init wrote is committed too, so jobs start from a complete checkout.
+    setup = set(gitops.checked("show", "--name-only", "--format=", "HEAD", cwd=root).split())
+    assert {
+        ".gitignore", "shiptrail/config.json", "shiptrail/backlog.md",
+        ".agents/skills/shiptrail/SKILL.md"
+    } <= setup
+    # Only what init wrote is committed; the user's own file is left alone.
+    assert gitops.checked("status", "--porcelain", cwd=root) == "?? package.json"
     text = (root / "AGENTS.md").read_text(encoding="utf-8")
     assert "npm run dev" in text and "npm run test" in text
     config = json.loads((root / "shiptrail/config.json").read_text(encoding="utf-8"))

@@ -58,7 +58,8 @@ def replay(runtime: Runtime, repo: str, after: int) -> tuple[bool, dict, list[di
 
 def closing(request: Request) -> bool:
     """True once the server is shutting down, so open streams end and let it exit."""
-    return getattr(request.app.state, "closing", False)
+    app = getattr(request, "app", None)
+    return bool(app and getattr(app.state, "closing", False))
 
 
 async def repo_stream(request: Request, runtime: Runtime, repo: str,

@@ -32,12 +32,38 @@ export function applyEvent(client: QueryClient, repo: string, event: RepoEvent) 
 }
 
 type Connection = "connecting" | "connected" | "disconnected";
-/** Native EventSource retains Last-Event-ID on automatic reconnect. `after` seeds first connect. */
-export function connectRepo(
+
+/**
+ * Run `start` while this tab is visible, and its stop function while it is not. A browser
+ * allows only six connections per site over HTTP/1.1 and a live stream holds one for as long
+ * as it is open, so a second tab would otherwise leave every other request waiting.
+ */
+export function whileVisible(start: () => () => void): () => void {
+  let stop: (() => void) | undefined;
+  const sync = () => {
+    if (document.visibilityState === "visible") stop ??= start();
+    else {
+      stop?.();
+      stop = undefined;
+    }
+  };
+  document.addEventListener("visibilitychange", sync);
+  sync();
+  return () => {
+    document.removeEventListener("visibilitychange", sync);
+    stop?.();
+    stop = undefined;
+  };
+}
+
+export const connectRepo = (
   client: QueryClient,
   repo: string,
   onConnection?: (state: Connection) => void,
-) {
+) => whileVisible(() => openRepo(client, repo, onConnection));
+
+/** Native EventSource retains Last-Event-ID on automatic reconnect. `after` seeds first connect. */
+function openRepo(client: QueryClient, repo: string, onConnection?: (state: Connection) => void) {
   let source: EventSource | undefined;
   let closed = false;
   let recovering = false;
@@ -122,7 +148,11 @@ const invalidateCrossRepo = (client: QueryClient) =>
     client.invalidateQueries({ queryKey: ["usage"] }),
   ]);
 
-export function connectOverview(client: QueryClient, onConnection?: (state: Connection) => void) {
+export const connectOverview = (client: QueryClient, onConnection?: (state: Connection) => void) =>
+  whileVisible(() => openOverview(client, onConnection));
+
+function openOverview(client: QueryClient, onConnection?: (state: Connection) => void) {
+  onConnection?.("connecting");
   const source = new EventSource("/api/overview/stream");
   source.onopen = () => {
     onConnection?.("connected");
@@ -151,16 +181,24 @@ export function connectLog(
   offset: number,
   onBatch: (batch: z.infer<typeof logSchema>) => void,
 ) {
+  // Kept across a pause, so a stream reopened later carries on from where it stopped.
   let cursor = offset;
-  const source = new EventSource(
-    `/api/repos/${encodeURIComponent(repo)}/attempts/${attempt}/stream?offset=${offset}`,
-  );
-  source.addEventListener("log", (message) => {
-    const batch = logSchema.parse(JSON.parse((message as MessageEvent).data));
-    if (batch.offset <= cursor) return;
-    cursor = batch.offset;
-    onBatch(batch);
+  let finished = false;
+  return whileVisible(() => {
+    if (finished) return () => undefined;
+    const source = new EventSource(
+      `/api/repos/${encodeURIComponent(repo)}/attempts/${attempt}/stream?offset=${cursor}`,
+    );
+    source.addEventListener("log", (message) => {
+      const batch = logSchema.parse(JSON.parse((message as MessageEvent).data));
+      if (batch.offset <= cursor) return;
+      cursor = batch.offset;
+      onBatch(batch);
+    });
+    source.addEventListener("end", () => {
+      finished = true;
+      source.close();
+    });
+    return () => source.close();
   });
-  source.addEventListener("end", () => source.close());
-  return () => source.close();
 }

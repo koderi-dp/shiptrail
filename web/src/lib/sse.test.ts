@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient } from "@tanstack/react-query";
 import { api, keys, stateSchema } from "./api";
 import { connectLog, connectOverview, connectRepo } from "./sse";
@@ -43,6 +43,14 @@ const snapshot = (last_event_id: number) =>
       sensitivePaths: [],
     },
   });
+beforeEach(() => {
+  // Streams only run in a visible tab.
+  vi.stubGlobal("document", {
+    visibilityState: "visible",
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  });
+});
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
